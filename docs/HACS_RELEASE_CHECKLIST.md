@@ -33,7 +33,8 @@ git push origin vX.Y.Z
 - [x] `test.yml`, real config flow bug — **found and fixed** (0.3.3): the parameter-mapping schema's `default=None` on unmapped channels made `EntitySelector` validate `None` and reject it, breaking the config flow for any real user who left a channel unmapped, not just in tests. See CHANGELOG.md 0.3.3.
 - [x] `test.yml`, socket-blocked test — **found and fixed** (0.3.3): `test_connection_error` opened a real socket, blocked by `pytest-homeassistant-custom-component`'s global socket guard. Replaced with a mock.
 - [x] `test.yml`, remaining socket-blocked tests — **found and fixed** (0.3.4): 9 more tests in `test_api.py` use a real loopback `aiohttp.test_utils.TestServer`, also blocked by the same guard. Fixed with `pytest.mark.enable_socket`; verified locally with `pytest-socket --disable-socket` (the actual mechanism the HA plugin uses) that this genuinely re-enables the server rather than being silently ignored.
-- [ ] Not yet re-confirmed green end-to-end after the 0.3.4 fix — check the **Actions** tab after the next push lands.
+- [x] `test.yml`, executor-thread leak from real network I/O — **found and fixed** (0.3.5): the 0.3.4 fix let real HTTP traffic occur, which triggered a Python 3.12 asyncio watchdog thread that HA's own strict cleanup fixture failed on. Rewrote `test_api.py` to mock `ClientSession.request` directly (no real server, no third-party mocking library — `aioresponses` was tried and rejected for a live compatibility gap with recent aiohttp, reproduced locally) so no real traffic can occur at all. Verified directly (not just asserted) that no thread leaks with this pattern.
+- [ ] Not yet re-confirmed green end-to-end after the 0.3.5 fix — check the **Actions** tab after the next push lands.
 
 ## 4. Brand assets
 

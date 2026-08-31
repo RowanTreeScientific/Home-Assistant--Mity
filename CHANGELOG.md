@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5 — Rewrite test_api.py to eliminate real socket usage entirely
+
+The 0.3.4 `enable_socket` marker fixed the immediate `SocketBlockedError`s but only papered over a deeper problem: allowing real (even loopback) network I/O let `test_enroll_success` trigger Python 3.12's asyncio default-executor watchdog thread on real request completion, which HA's own strict thread-leak-detecting test fixture then failed on (found from the actual CI log, pasted directly — `AssertionError` in `pytest_homeassistant_custom_component.plugins.verify_cleanup`, a `Thread-1 (_run_safe_shutdown_loop)` left behind). Real bug in the test's design, not in `coordinator.py`/`api.py`.
+
+Tried `aioresponses` (mock at the HTTP layer, no real server) as the fix — but it has a live compatibility gap with recent aiohttp (`ClientResponse.__init__() missing... 'stream_writer'`, reproduced locally with the latest PyPI release of each) and, in some setup path, *still* touched a real socket under `--disable-socket`. Not worth the added dependency risk.
+
+Settled on a small stdlib-only fake replacing `ClientSession.request` directly — no real server, no third-party mocking library, no HTTP traffic of any kind, so the executor-thread trigger can't recur. `enable_socket` is still needed for one narrow, well-understood reason: constructing a real `ClientSession()` at all makes `TCPConnector.__init__` do a one-shot, synchronous IPv6-capability probe via `socket.socket()`, unrelated to any connection attempt. Verified directly (not just asserted) that this doesn't leak a thread: ran the same session-construct-then-mocked-request pattern outside pytest entirely and diffed `threading.enumerate()` before/after — no leaked threads.
+
 ## 0.3.4 — Fix remaining socket-blocked tests
 
 The 0.3.3 socket fix only covered `test_connection_error`; 9 other tests in `tests/test_api.py` use a *different* real-socket mechanism — the `client` fixture spins up a real `aiohttp.test_utils.TestServer` to exercise `MityApiClient` end-to-end over actual HTTP, and binding that loopback server also trips `pytest-homeassistant-custom-component`'s global `pytest-socket` guard. Found from the actual CI failure log (pasted directly this time, all 9 `SocketBlockedError`s). Fixed with `pytest-socket`'s own purpose-built escape hatch — `pytestmark = pytest.mark.enable_socket` at module level — rather than rewriting the tests to avoid a real server. Verified directly: installed `pytest-socket` locally and ran the suite with `--disable-socket` (the same mechanism the HA plugin uses), confirming the marker genuinely re-enables the loopback server rather than being silently ignored.
