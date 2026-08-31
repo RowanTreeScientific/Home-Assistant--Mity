@@ -3,10 +3,11 @@
     "step": {
       "user": {
         "title": "Connect to MiTY",
-        "description": "Enter your MiTY endpoint and the enrollment code for the study you're joining. Read the MiTY Terms & Conditions at {terms_url} before agreeing.",
+        "description": "Enter your MiTY endpoint and the enrollment code for the study you're joining. Already contributing to another MiTY study? Run this setup again with that study's own code to join it too. Read the MiTY Terms & Conditions at {terms_url} before agreeing.",
         "data": {
           "base_url": "MiTY endpoint URL",
           "enroll_code": "Study enrollment code",
+          "study_nickname": "Name for this study (optional, helps tell multiple studies apart)",
           "agree_terms": "I agree to the MiTY Terms & Conditions"
         }
       },
@@ -42,12 +43,13 @@
     "step": {
       "init": {
         "title": "MiTY parameters",
-        "description": "Change which Home Assistant sensors are shared with MiTY.",
+        "description": "Change which Home Assistant sensors are shared with MiTY, and rename this study if you're contributing to more than one.",
         "data": {
           "entity_temperature": "Indoor temperature sensor",
           "entity_humidity": "Indoor humidity sensor",
           "entity_motion": "Motion / occupancy sensor",
-          "entity_energy_usage": "Energy usage sensor"
+          "entity_energy_usage": "Energy usage sensor",
+          "study_nickname": "Name for this study"
         }
       },
       "frequency": {

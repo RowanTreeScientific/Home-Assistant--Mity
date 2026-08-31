@@ -90,6 +90,32 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unloaded
 
 
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Best-effort withdraw from the study when the entry is deleted.
+
+    Deleting a MiTY integration entry from Home Assistant and leaving its
+    study are two different things server-side -- simply removing the
+    entry would otherwise leave an orphaned device MiTY still considers
+    active. Default to the least destructive withdrawal ("remove_only",
+    keeping any already-submitted data) so a participant who just wants
+    this study gone from Home Assistant isn't silently left enrolled.
+    Failures here are logged, not raised -- the entry is being deleted
+    either way, and a participant who wants to guarantee withdrawal
+    happened can call `mity.leave_study` explicitly beforehand and check
+    the result.
+    """
+    session = async_get_clientsession(hass)
+    client = MityApiClient(session, entry.data[CONF_BASE_URL])
+    try:
+        await client.remove(entry.data[CONF_DEVICE_API_KEY], ACTION_REMOVE_ONLY)
+    except MityApiError:
+        _LOGGER.warning(
+            "Could not confirm MiTY withdrawal for removed entry %s; "
+            "the device may still show as active on the MiTY platform",
+            entry.entry_id,
+        )
+
+
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Re-apply the submission interval when options change."""
     coordinator: MityCoordinator = entry.runtime_data

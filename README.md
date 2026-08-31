@@ -14,7 +14,7 @@ This integration follows the **Data Reciprocity Principle**: a participant choos
 
 ## Status
 
-This is an early, actively-developed release covering enrollment, data contribution and pass/fail feedback (roadmap milestones 1–4 below). Research insights, home health scores and joinable studies (milestones 5–7) are not yet implemented — see [Roadmap](#roadmap).
+This is an early, actively-developed release covering enrollment, data contribution, pass/fail feedback, and multi-study participation (roadmap milestones 1–4 and 6 below). Home health score / insights polling (milestone 5) has a confirmed backend contract but isn't built on the Home Assistant side yet. See [Roadmap](#roadmap) and [docs/DESIGN_NOTES.md](docs/DESIGN_NOTES.md) for what's confirmed vs. still proposed.
 
 ## Installation
 
@@ -38,13 +38,19 @@ Go to **Settings → Devices & Services → Add Integration** and search for **M
 
 The setup flow has three steps:
 
-1. **Connect** — enter the endpoint and enrollment code, and agree to the [MiTY Terms & Conditions](https://www.mi-ty-tre.co.uk/terms). Nothing is enrolled until you agree.
+1. **Connect** — enter the endpoint and enrollment code, optionally name the study, and agree to the [MiTY Terms & Conditions](https://www.mi-ty-tre.co.uk/terms). Nothing is enrolled until you agree.
 2. **Select parameters** — choose which of your existing Home Assistant entities to share. Every citizen-science trial currently shares one fixed set of fields: indoor temperature, indoor humidity, motion/occupancy, and energy usage. You can leave any of these blank.
 3. **Set frequency** — how often (in minutes) your data is sent. Default 240 minutes; allowed range 60–10,080 minutes (1 hour to 1 week).
 
-On completion, MiTY creates a permanent, pseudonymous device identity for your installation and a **MiTY Research** device appears in Home Assistant.
+On completion, MiTY creates a permanent, pseudonymous device identity for your installation and a device appears in Home Assistant, named after the study (or "MiTY Research" if you didn't give it a name).
 
-You can change your parameter mapping and frequency at any time from the integration's **Configure** option, without re-enrolling.
+You can change your parameter mapping, frequency, and the study's display name at any time from the integration's **Configure** option, without re-enrolling.
+
+### Contributing to more than one study
+
+A MiTY trial and a "study" are the same thing — there's no separate "browse and join" step today. To join a second study, add the **MiTY Research** integration again (**Settings → Devices & Services → Add Integration**) using that study's own enrollment code. Each study becomes its own device with its own status, entities, and events, so automations can target one study specifically if needed. Give each one a distinct name in step 1 (or rename later via **Configure**) so they're easy to tell apart.
+
+Deleting a study's integration entry from Home Assistant automatically withdraws from that study on MiTY's side (equivalent to `mity.leave_study` with `remove_only` — your already-submitted data is kept). Use the `mity.leave_study` service first if you specifically want to request deletion of your data as part of leaving.
 
 ## What gets sent
 
@@ -66,7 +72,7 @@ No entity IDs, friendly names, or anything else identifying your household is in
 
 ## Entities
 
-Once enrolled, a **MiTY Research** device appears with:
+Once enrolled, a device appears (named after the study, per config entry) with:
 
 | Entity | Type | Description |
 |---|---|---|
@@ -113,7 +119,7 @@ automation:
 | `mity.leave_study` | Withdraw this device (`remove_only` keeps existing data; `remove_and_delete` also requests deletion, subject to the study's own policy — immediate or after a cool-off period) |
 | `mity.rejoin_study` | Reactivate a previously-withdrawn device using its stored rejoin token (only works if the study's policy allows rejoining under the same identity) |
 
-`mity.leave_study` and `mity.rejoin_study` are deliberately services rather than buttons — leaving a study is a meaningful decision that shouldn't be one accidental tap away.
+`mity.leave_study` and `mity.rejoin_study` are deliberately services rather than buttons — leaving a study is a meaningful decision that shouldn't be one accidental tap away. All three services take an `entry_id`, so if you've joined multiple studies, pick which one's config entry to act on (the entry ID picker in the Home Assistant service UI shows each by its study name).
 
 ## Privacy and data handling
 
@@ -160,8 +166,8 @@ pytest
 - [x] **Milestone 2** — Sensor discovery + parameter selection
 - [x] **Milestone 3** — Scheduled data submission
 - [x] **Milestone 4** — Pass/fail events + automations, pause/leave/rejoin
-- [ ] **Milestone 5** — Insights + home health score polling
-- [ ] **Milestone 6** — Joinable research studies
+- [ ] **Milestone 5** — Insights + home health score polling — [API confirmed](docs/DESIGN_NOTES.md), backend implementation pending, HA side not yet built
+- [x] **Milestone 6** — Joinable research studies — join/leave already works via one config entry per study; a public "browse studies" discovery API is [proposed, not yet confirmed](docs/DESIGN_NOTES.md)
 - [ ] **Milestone 7** — HACS default-store community release (brand assets, quality-scale documentation)
 
 ## Contributing

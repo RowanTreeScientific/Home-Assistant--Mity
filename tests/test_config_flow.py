@@ -1,7 +1,6 @@
 """Tests for the MiTY config flow.
 
-Requires pytest-homeassistant-custom-component -- see tests/ha/conftest.py.
-Run with: pytest tests/ha
+Requires pytest-homeassistant-custom-component -- see tests/conftest.py.
 """
 
 from __future__ import annotations
@@ -62,6 +61,68 @@ async def test_full_flow_creates_entry(hass: HomeAssistant, mock_enroll) -> None
     assert result["data"]["device_api_key"] == "device-key"
     assert result["options"]["scan_interval_minutes"] == 240
     assert result["options"]["paused"] is False
+    assert result["title"] == "MiTY Research"
+    assert result["data"]["study_nickname"] == "MiTY Research"
+
+
+async def test_study_nickname_used_as_title(
+    hass: HomeAssistant, mock_enroll
+) -> None:
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {**VALID_ENROLL_INPUT, "study_nickname": "Indoor Air Study"},
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"scan_interval_minutes": 240}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Indoor Air Study"
+    assert result["data"]["study_nickname"] == "Indoor Air Study"
+
+
+async def test_second_study_creates_separate_entry(
+    hass: HomeAssistant, mock_enroll
+) -> None:
+    """Joining a second study is just running the flow again with its own
+    code -- since each enrollment yields a different instance_id, it must
+    create a second, independent config entry rather than aborting."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {**VALID_ENROLL_INPUT, "study_nickname": "Study One"},
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"scan_interval_minutes": 240}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    mock_enroll.return_value = EnrollmentResult(
+        instance_id=99, device_api_key="device-key-2", rejoin_token="rejoin-2"
+    )
+    result2 = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result2 = await hass.config_entries.flow.async_configure(
+        result2["flow_id"],
+        {**VALID_ENROLL_INPUT, "study_nickname": "Study Two"},
+    )
+    result2 = await hass.config_entries.flow.async_configure(result2["flow_id"], {})
+    result2 = await hass.config_entries.flow.async_configure(
+        result2["flow_id"], {"scan_interval_minutes": 240}
+    )
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["title"] == "Study Two"
+
+    entries = hass.config_entries.async_entries(DOMAIN)
+    assert len(entries) == 2
+    assert {e.data["instance_id"] for e in entries} == {42, 99}
 
 
 async def test_requires_terms_agreement(hass: HomeAssistant, mock_enroll) -> None:

@@ -13,6 +13,15 @@ CONF_INSTANCE_ID: Final = "instance_id"
 CONF_DEVICE_API_KEY: Final = "device_api_key"
 CONF_REJOIN_TOKEN: Final = "rejoin_token"
 
+# A participant-chosen label distinguishing one enrolled study from another
+# when the same Home Assistant install has joined several (see "Citizen
+# Science Study Discovery API Design" -- a trial IS a study 1:1, so joining
+# a second study is just adding this integration again with a second
+# enrollment code; the nickname is what keeps multiple entries legible in
+# the HA UI, since the enroll response itself carries no study name).
+CONF_STUDY_NICKNAME: Final = "study_nickname"
+DEFAULT_STUDY_NICKNAME: Final = "MiTY Research"
+
 # --- Options keys (editable after setup) ---
 OPT_SCAN_INTERVAL_MINUTES: Final = "scan_interval_minutes"
 OPT_PAUSED: Final = "paused"

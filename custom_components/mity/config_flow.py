@@ -29,9 +29,11 @@ from .const import (
     CONF_ENROLL_CODE,
     CONF_INSTANCE_ID,
     CONF_REJOIN_TOKEN,
+    CONF_STUDY_NICKNAME,
     DATA_CHANNELS,
     DEFAULT_BASE_URL,
     DEFAULT_SCAN_INTERVAL_MINUTES,
+    DEFAULT_STUDY_NICKNAME,
     DOMAIN,
     MAX_SCAN_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
@@ -97,13 +99,22 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._base_url: str = DEFAULT_BASE_URL
+        self._nickname: str = DEFAULT_STUDY_NICKNAME
         self._enrollment: dict[str, Any] = {}
         self._parameters: dict[str, Any] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> Any:
-        """Step 1: endpoint, terms agreement, enrollment code."""
+        """Step 1: endpoint, terms agreement, enrollment code.
+
+        Joining a second (or third...) study is just running this flow
+        again with that study's own code -- a MiTY trial and a "study" are
+        1:1, so there's no separate join/browse step. The nickname field
+        exists purely so multiple joined studies stay distinguishable in
+        the Home Assistant UI, since the enrollment response itself
+        carries no study name to use automatically.
+        """
         errors: dict[str, str] = {}
 
         if user_input is not None and not user_input.get("agree_terms"):
@@ -111,6 +122,9 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None and not errors:
             self._base_url = user_input[CONF_BASE_URL]
+            self._nickname = (
+                user_input.get(CONF_STUDY_NICKNAME) or DEFAULT_STUDY_NICKNAME
+            )
             session = async_get_clientsession(self.hass)
             client = MityApiClient(session, self._base_url)
             try:
@@ -138,6 +152,7 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_BASE_URL, default=self._base_url): str,
                 vol.Required(CONF_ENROLL_CODE): str,
+                vol.Optional(CONF_STUDY_NICKNAME): str,
                 vol.Required("agree_terms", default=False): bool,
             }
         )
@@ -173,6 +188,7 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = {
                 CONF_BASE_URL: self._base_url,
+                CONF_STUDY_NICKNAME: self._nickname,
                 **self._enrollment,
             }
             options = {
@@ -183,7 +199,7 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
                 OPT_PAUSED: False,
             }
             return self.async_create_entry(
-                title="MiTY Research",
+                title=self._nickname,
                 data=data,
                 options=options,
             )
@@ -210,14 +226,30 @@ class MityOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> Any:
         if user_input is not None:
+            nickname = user_input.pop(CONF_STUDY_NICKNAME, None)
+            if nickname:
+                self.hass.config_entries.async_update_entry(
+                    self._entry,
+                    title=nickname,
+                    data={**self._entry.data, CONF_STUDY_NICKNAME: nickname},
+                )
             self._pending = {
                 k: v for k, v in user_input.items() if v is not None
             }
             return await self.async_step_frequency()
 
+        schema_dict = dict(_parameters_schema(dict(self._entry.options)).schema)
+        schema_dict[
+            vol.Optional(
+                CONF_STUDY_NICKNAME,
+                default=self._entry.data.get(
+                    CONF_STUDY_NICKNAME, DEFAULT_STUDY_NICKNAME
+                ),
+            )
+        ] = str
         return self.async_show_form(
             step_id="init",
-            data_schema=_parameters_schema(dict(self._entry.options)),
+            data_schema=vol.Schema(schema_dict),
         )
 
     async def async_step_frequency(
