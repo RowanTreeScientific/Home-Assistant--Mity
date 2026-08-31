@@ -1,42 +1,28 @@
 """Tests for the pure-logic helpers in coordinator.py.
 
-`_coerce_value` has no Home Assistant dependency, so it's loaded the same
-way as api.py in test_api.py -- directly from source, without pulling in
-the rest of the package (and therefore without needing `homeassistant`
-installed). Full coordinator behaviour (entity state reads, scheduling)
-is exercised separately under pytest-homeassistant-custom-component.
+`_coerce_value` has no real Home Assistant dependency -- it's plain string
+coercion -- but `coordinator.py` itself does `from .api import (...)`, a
+relative import that only resolves when the module is loaded as part of
+its real package. So unlike api.py (loaded standalone in test_api.py),
+this imports `custom_components.mity.coordinator` normally rather than by
+file path. That still means `homeassistant` needs to be importable
+(`custom_components/mity/__init__.py` imports it), so this module is
+skipped gracefully when it isn't -- e.g. in a lightweight local venv used
+to iterate on api.py/coordinator.py logic without the full HA test stack.
+Full coordinator behaviour (entity state reads, scheduling) is exercised
+separately under pytest-homeassistant-custom-component.
 """
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
+try:
+    from custom_components.mity.coordinator import _coerce_value
 
+    _SKIP = False
+except ModuleNotFoundError:
+    _SKIP = True
 
-def _load_coordinator_module():
-    module_path = (
-        Path(__file__).parent.parent
-        / "custom_components"
-        / "mity"
-        / "coordinator.py"
-    )
-    spec = importlib.util.spec_from_file_location(
-        "mity_coordinator_helpers", module_path
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    try:
-        spec.loader.exec_module(module)
-    except ModuleNotFoundError:
-        return None
-    return module
-
-
-_coordinator = _load_coordinator_module()
-
-if _coordinator is not None:
-    _coerce_value = _coordinator._coerce_value
+if not _SKIP:
 
     def test_coerce_motion_on() -> None:
         assert _coerce_value("motion", "on") is True

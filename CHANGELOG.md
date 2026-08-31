@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2 — Fix pytest CI collection error
+
+`tests/test_coordinator_helpers.py` loaded `coordinator.py` by file path (to avoid needing Home Assistant installed for a pure-logic test), but `coordinator.py` has `from .api import (...)`, a relative import that only resolves inside a real package. Loading it standalone made that import fail — invisible in local testing because Home Assistant wasn't installed there either, so the function bailed out earlier for an unrelated, already-handled reason, masking the real bug. In actual CI (`pytest (3.12)` job), Home Assistant *is* installed, so it got far enough to hit the broken relative import and errored the whole collection, failing every test in the run. Found via the real CI log (`gh run view --log-failed`, since GitHub gates log text behind an authenticated session that no automated tool here could reach). Fixed by importing `custom_components.mity.coordinator` normally instead — the same dotted-import approach `test_config_flow.py`/`test_init.py` already use successfully.
+
 ## 0.3.1 — CI fixes
 
 Found by actually checking the Actions tab once the repo went public (previously unverifiable — no `gh`/API access from this environment against a private repo):

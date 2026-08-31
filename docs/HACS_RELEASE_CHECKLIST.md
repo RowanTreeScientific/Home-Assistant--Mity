@@ -27,9 +27,10 @@ git push origin vX.Y.Z
 - [x] `hassfest` job — **found and fixed**: `manifest.json` keys weren't in the required `domain, name, then alphabetical` order.
 - [x] `hacs` job, JSON schema — **found and fixed**: `hacs.json` had an `iot_class` key, which isn't part of its schema (that belongs in `manifest.json` only, where it already was).
 - [x] `hacs` job, license detection — **found and fixed**: `LICENSE` was a paraphrased Apache-2.0 (close but not verbatim), which GitHub's license detector scored as `NOASSERTION`. Replaced with the verbatim official text.
-- [ ] `hacs` job, brand assets — **expected to keep failing** until the brand-assets gap in Section 4 below is closed. This is not a bug to fix; `hacs/action` correctly flags that `home-assistant/brands` has no entry for this domain yet. Don't mistake continued red here for a regression once everything else above is green.
-- [x] `test.yml`, pytest — **found and fixed**: `--cov=custom_components.mity --cov-report=term-missing` requires the `pytest-cov` plugin, which was missing from `requirements_test.txt` — caused every run to fail immediately on argument parsing (exit code 2) before any test executed. Verified locally that `--cov` resolves correctly once `pytest-cov` is installed.
-- [ ] Not yet re-confirmed green end-to-end after the fixes above — check the **Actions** tab after the next push lands.
+- [x] `hacs` job, brand assets — **confirmed to be the only remaining `hacs` failure** (checked the actual check-run annotations): `<Validation brands> failed: The repository does not provide brand assets and is not listed in the Home Assistant brands repository.` Expected to keep failing until the brand-assets gap in Section 4 below is closed — not a bug, `hacs/action` is correctly flagging a real gap. Don't mistake continued red here for a regression.
+- [x] `test.yml`, `pytest-cov` missing — **found and fixed**: `--cov=...`/`--cov-report=...` need the `pytest-cov` plugin, absent from `requirements_test.txt`. Added.
+- [x] `test.yml`, pytest (3.12) collection error — **found and fixed** (this was the actual cause of the exit-code-2 failure, confirmed via the real CI log — the `pytest-cov` gap above was a real but separate issue): `tests/test_coordinator_helpers.py` loaded `coordinator.py` by raw file path to avoid needing Home Assistant installed, but `coordinator.py`'s `from .api import (...)` relative import can't resolve outside a real package, erroring collection for the whole run. Fixed by importing `custom_components.mity.coordinator` normally instead, like the other HA-dependent test files already do. See CHANGELOG.md 0.3.2.
+- [ ] Not yet re-confirmed green end-to-end after the 0.3.2 fix — check the **Actions** tab after the next push lands.
 
 ## 4. Brand assets
 
