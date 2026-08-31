@@ -1,6 +1,5 @@
 {
   "name": "MiTY Research",
   "render_readme": true,
-  "homeassistant": "2024.6.0",
-  "iot_class": "cloud_polling"
+  "homeassistant": "2024.6.0"
 }

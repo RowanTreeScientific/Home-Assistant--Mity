@@ -23,8 +23,13 @@ git push origin vX.Y.Z
 
 ## 3. Validate cleanly in CI
 
-- [ ] Confirm `.github/workflows/validate.yml` (hassfest + `hacs/action`) passes on the `master` branch — check the **Actions** tab. Both were added at project start but have never been confirmed green from this side (no `gh` CLI / API access available in this environment to check run status).
-- [ ] Confirm `.github/workflows/test.yml` (ruff + pytest, including the HA-dependent suite under `pytest-homeassistant-custom-component`) passes.
+- [x] `validate.yml`/`test.yml` triggering at all — **found and fixed** (2026-08-31): both watched `branches: [main]` but this repo's default branch is `master`, so neither had ever run despite multiple pushes. Confirmed fixed — they now fire on push to `master`.
+- [x] `hassfest` job — **found and fixed**: `manifest.json` keys weren't in the required `domain, name, then alphabetical` order.
+- [x] `hacs` job, JSON schema — **found and fixed**: `hacs.json` had an `iot_class` key, which isn't part of its schema (that belongs in `manifest.json` only, where it already was).
+- [x] `hacs` job, license detection — **found and fixed**: `LICENSE` was a paraphrased Apache-2.0 (close but not verbatim), which GitHub's license detector scored as `NOASSERTION`. Replaced with the verbatim official text.
+- [ ] `hacs` job, brand assets — **expected to keep failing** until the brand-assets gap in Section 4 below is closed. This is not a bug to fix; `hacs/action` correctly flags that `home-assistant/brands` has no entry for this domain yet. Don't mistake continued red here for a regression once everything else above is green.
+- [x] `test.yml`, pytest — **found and fixed**: `--cov=custom_components.mity --cov-report=term-missing` requires the `pytest-cov` plugin, which was missing from `requirements_test.txt` — caused every run to fail immediately on argument parsing (exit code 2) before any test executed. Verified locally that `--cov` resolves correctly once `pytest-cov` is installed.
+- [ ] Not yet re-confirmed green end-to-end after the fixes above — check the **Actions** tab after the next push lands.
 
 ## 4. Brand assets
 

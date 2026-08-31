@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 — CI fixes
+
+Found by actually checking the Actions tab once the repo went public (previously unverifiable — no `gh`/API access from this environment against a private repo):
+
+- `validate.yml`/`test.yml` were watching `branches: [main]`; this repo's default branch is `master`, so neither had ever run since the project's first commit. Fixed.
+- `manifest.json` keys weren't in hassfest's required `domain, name, then alphabetical` order. Fixed.
+- `hacs.json` had an `iot_class` key that isn't part of its schema. Fixed (removed; `manifest.json` already carries it correctly).
+- `LICENSE` was a paraphrased Apache-2.0, not verbatim — GitHub's license detector returned `NOASSERTION`. Replaced with the verbatim official text.
+- `test.yml`'s `--cov` flags need the `pytest-cov` plugin, missing from `requirements_test.txt` — every pytest run failed immediately on argument parsing before any test executed. Fixed.
+- The `hacs` job's brand-assets check is expected to keep failing until real MiTY brand assets exist (tracked in [docs/HACS_RELEASE_CHECKLIST.md](docs/HACS_RELEASE_CHECKLIST.md)) — not a regression.
+
 ## 0.3.0 — Milestone 7: HACS release polish
 
 - **Reauthentication flow**: a device key rejected by MiTY (`MityAuthError`) now triggers Home Assistant's standard reauth prompt instead of just failing silently forever. Tries the stored rejoin token first; falls back to asking for a fresh enrollment code if the trial's policy requires a new identity after leaving.
