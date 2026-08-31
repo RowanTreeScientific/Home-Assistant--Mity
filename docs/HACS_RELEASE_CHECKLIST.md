@@ -30,7 +30,9 @@ git push origin vX.Y.Z
 - [x] `hacs` job, brand assets — **confirmed to be the only remaining `hacs` failure** (checked the actual check-run annotations): `<Validation brands> failed: The repository does not provide brand assets and is not listed in the Home Assistant brands repository.` Expected to keep failing until the brand-assets gap in Section 4 below is closed — not a bug, `hacs/action` is correctly flagging a real gap. Don't mistake continued red here for a regression.
 - [x] `test.yml`, `pytest-cov` missing — **found and fixed**: `--cov=...`/`--cov-report=...` need the `pytest-cov` plugin, absent from `requirements_test.txt`. Added.
 - [x] `test.yml`, pytest (3.12) collection error — **found and fixed** (this was the actual cause of the exit-code-2 failure, confirmed via the real CI log — the `pytest-cov` gap above was a real but separate issue): `tests/test_coordinator_helpers.py` loaded `coordinator.py` by raw file path to avoid needing Home Assistant installed, but `coordinator.py`'s `from .api import (...)` relative import can't resolve outside a real package, erroring collection for the whole run. Fixed by importing `custom_components.mity.coordinator` normally instead, like the other HA-dependent test files already do. See CHANGELOG.md 0.3.2.
-- [ ] Not yet re-confirmed green end-to-end after the 0.3.2 fix — check the **Actions** tab after the next push lands.
+- [x] `test.yml`, real config flow bug — **found and fixed** (0.3.3): the parameter-mapping schema's `default=None` on unmapped channels made `EntitySelector` validate `None` and reject it, breaking the config flow for any real user who left a channel unmapped, not just in tests. See CHANGELOG.md 0.3.3.
+- [x] `test.yml`, socket-blocked test — **found and fixed** (0.3.3): `test_connection_error` opened a real socket, blocked by `pytest-homeassistant-custom-component`'s global socket guard. Replaced with a mock.
+- [ ] Not yet re-confirmed green end-to-end after the 0.3.3 fix — check the **Actions** tab after the next push lands.
 
 ## 4. Brand assets
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.3 — Fix real config flow bug + a test relying on real sockets
+
+Found via the CI log after 0.3.2 fixed collection and CI could finally run to completion:
+
+- **Real bug**: `config_flow.py`'s parameter-mapping schema set `default=None` on every unmapped channel, and `EntitySelector` validates whatever value is present — including a voluptuous-inserted default. `None` isn't a valid entity ID, so submitting the parameters step with *anything* left blank failed schema validation (`InvalidData: Schema validation failed @ data['entity_motion']`) rather than just skipping that channel. Reproduced directly with a standalone voluptuous check before fixing, and confirmed the fix preserves real prefilled defaults in the options flow. This would have broken the config flow for every real user leaving any channel unmapped, not just in tests — worth flagging as the more important fix in this release despite being caught by CI rather than manual testing.
+- `tests/test_api.py::test_connection_error` opened a real socket to `127.0.0.1:1` to provoke a connection failure. `pytest-homeassistant-custom-component` globally blocks real sockets for the whole test session (by design, to keep HA's test suite from ever touching the network) — this affected the whole run, not just HA-dependent tests. Replaced with a mocked `ClientConnectionError` at the request layer: faster, deterministic, and no longer dependent on what's listening on localhost in a given environment.
+
 ## 0.3.2 — Fix pytest CI collection error
 
 `tests/test_coordinator_helpers.py` loaded `coordinator.py` by file path (to avoid needing Home Assistant installed for a pure-logic test), but `coordinator.py` has `from .api import (...)`, a relative import that only resolves inside a real package. Loading it standalone made that import fail — invisible in local testing because Home Assistant wasn't installed there either, so the function bailed out earlier for an unrelated, already-handled reason, masking the real bug. In actual CI (`pytest (3.12)` job), Home Assistant *is* installed, so it got far enough to hit the broken relative import and errored the whole collection, failing every test in the run. Found via the real CI log (`gh run view --log-failed`, since GitHub gates log text behind an authenticated session that no automated tool here could reach). Fixed by importing `custom_components.mity.coordinator` normally instead — the same dotted-import approach `test_config_flow.py`/`test_init.py` already use successfully.

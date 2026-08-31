@@ -65,12 +65,27 @@ CHANNEL_LABEL = {
 
 
 def _parameters_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+    """Build the entity-mapping schema.
+
+    A channel with no current mapping must NOT get `default=None` -- an
+    EntitySelector validates whatever value is present (including a
+    voluptuous-inserted default), and None isn't a valid entity ID, so a
+    forced None default made every blank field fail schema validation the
+    moment the form was submitted with nothing chosen. Only set a default
+    when there's a real entity ID to prefill; otherwise leave the key
+    genuinely optional so an unset field is simply absent from the
+    validated output rather than present-and-None.
+    """
     defaults = defaults or {}
     fields: dict[Any, Any] = {}
     for channel in DATA_CHANNELS:
-        fields[
-            vol.Optional(channel, default=defaults.get(channel))
-        ] = selector.EntitySelector(
+        current = defaults.get(channel)
+        key = (
+            vol.Optional(channel, default=current)
+            if current
+            else vol.Optional(channel)
+        )
+        fields[key] = selector.EntitySelector(
             selector.EntitySelectorConfig(domain=CHANNEL_DOMAIN_FILTER[channel])
         )
     return vol.Schema(fields)

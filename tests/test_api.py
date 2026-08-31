@@ -173,9 +173,23 @@ async def test_remove(client: MityApiClient) -> None:
 
 
 async def test_connection_error() -> None:
-    from aiohttp import ClientSession
+    """A real socket connection attempt is unnecessary and, under
+    pytest-homeassistant-custom-component's global socket guard (part of
+    the HA test suite this file otherwise has no dependency on), actively
+    blocked -- mock the failure at the request layer instead, which is
+    both faster and deterministic regardless of what's listening on
+    localhost in a given test environment.
+    """
+    from unittest.mock import patch
+
+    from aiohttp import ClientConnectionError, ClientSession
 
     async with ClientSession() as session:
-        bad_client = MityApiClient(session, "http://127.0.0.1:1")
-        with pytest.raises(MityConnectionError):
-            await bad_client.enroll(VALID_CODE)
+        client = MityApiClient(session, "http://api.mi-ty-tre.co.uk")
+        with (
+            patch.object(
+                session, "request", side_effect=ClientConnectionError("mock failure")
+            ),
+            pytest.raises(MityConnectionError),
+        ):
+            await client.enroll(VALID_CODE)
