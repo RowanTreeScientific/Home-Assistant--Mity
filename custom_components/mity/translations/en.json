@@ -1,0 +1,82 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to MiTY",
+        "description": "Enter your MiTY endpoint and the enrollment code for the study you're joining. Read the MiTY Terms & Conditions at {terms_url} before agreeing.",
+        "data": {
+          "base_url": "MiTY endpoint URL",
+          "enroll_code": "Study enrollment code",
+          "agree_terms": "I agree to the MiTY Terms & Conditions"
+        }
+      },
+      "parameters": {
+        "title": "Select information to contribute",
+        "description": "Choose which of your Home Assistant sensors to share with MiTY. Your device ID is {instance_id}. You can change this later from the integration's options. Leave a field blank to not share that type of data.",
+        "data": {
+          "entity_temperature": "Indoor temperature sensor",
+          "entity_humidity": "Indoor humidity sensor",
+          "entity_motion": "Motion / occupancy sensor",
+          "entity_energy_usage": "Energy usage sensor"
+        }
+      },
+      "frequency": {
+        "title": "Data transmission frequency",
+        "description": "How often should Home Assistant send your data to MiTY?",
+        "data": {
+          "scan_interval_minutes": "Every (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_enroll_code": "That enrollment code is invalid or no longer active. Check the code and try again.",
+      "cannot_connect": "Could not reach the MiTY endpoint. Check the URL and your network connection.",
+      "must_agree_terms": "You must agree to the MiTY Terms & Conditions to continue.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This MiTY device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "MiTY parameters",
+        "description": "Change which Home Assistant sensors are shared with MiTY.",
+        "data": {
+          "entity_temperature": "Indoor temperature sensor",
+          "entity_humidity": "Indoor humidity sensor",
+          "entity_motion": "Motion / occupancy sensor",
+          "entity_energy_usage": "Energy usage sensor"
+        }
+      },
+      "frequency": {
+        "title": "Data transmission frequency",
+        "description": "How often should Home Assistant send your data to MiTY?",
+        "data": {
+          "scan_interval_minutes": "Every (minutes)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": { "name": "Status" },
+      "last_submission": { "name": "Last submission" },
+      "next_submission": { "name": "Next submission" },
+      "parameters_configured": { "name": "Parameters configured" }
+    },
+    "binary_sensor": {
+      "connected": { "name": "Connected" },
+      "submission_healthy": { "name": "Submission healthy" },
+      "paused": { "name": "Paused" }
+    },
+    "switch": {
+      "pause_contribution": { "name": "Pause contribution" }
+    },
+    "button": {
+      "send_data_now": { "name": "Send data now" },
+      "refresh_configuration": { "name": "Refresh configuration" }
+    }
+  }
+}

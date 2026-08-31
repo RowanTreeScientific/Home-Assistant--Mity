@@ -1,0 +1,59 @@
+send_now:
+  name: Send data now
+  description: >-
+    Submit the currently mapped MiTY parameters immediately, outside the
+    normal schedule. Equivalent to pressing the "Send Data Now" button.
+  fields:
+    entry_id:
+      name: Config entry
+      description: The MiTY config entry to submit for.
+      required: true
+      selector:
+        config_entry:
+          integration: mity
+
+leave_study:
+  name: Leave study
+  description: >-
+    Withdraw this device from its MiTY citizen science trial. Revokes the
+    device's ingest key immediately. Whether existing data is kept, deleted
+    immediately, or deleted after a cool-off period depends entirely on the
+    trial's own configured policy -- check the MiTY app/website for that
+    trial before choosing "Delete my data".
+  fields:
+    entry_id:
+      name: Config entry
+      description: The MiTY config entry to withdraw.
+      required: true
+      selector:
+        config_entry:
+          integration: mity
+    action:
+      name: Action
+      description: >-
+        "remove_only" leaves the study but keeps already-submitted data.
+        "remove_and_delete" additionally requests deletion of this device's
+        data, subject to the trial's policy.
+      required: false
+      default: remove_only
+      selector:
+        select:
+          options:
+            - remove_only
+            - remove_and_delete
+
+rejoin_study:
+  name: Rejoin study
+  description: >-
+    Reactivate a previously-withdrawn device using its stored rejoin token.
+    Only works if the trial's rejoin policy allows it -- if the trial
+    requires a new enrollment, remove and re-add the MiTY integration
+    instead.
+  fields:
+    entry_id:
+      name: Config entry
+      description: The MiTY config entry to rejoin.
+      required: true
+      selector:
+        config_entry:
+          integration: mity

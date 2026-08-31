@@ -1,0 +1,12 @@
+{
+  "domain": "mity",
+  "name": "MiTY Research",
+  "codeowners": ["@robsalter"],
+  "config_flow": true,
+  "documentation": "https://github.com/rowantree-scientific/ha-mity/blob/main/README.md",
+  "issue_tracker": "https://github.com/rowantree-scientific/ha-mity/issues",
+  "iot_class": "cloud_polling",
+  "integration_type": "device",
+  "requirements": [],
+  "version": "0.1.0"
+}
