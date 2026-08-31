@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.8 — Fix the lingering thread by removing the package, not racing its import
+
+0.3.7's `sys.modules["aiodns"] = None` conftest.py block was directly verified to work in isolation (confirmed `aiohttp.resolver.DefaultResolver` really does flip from the pycares-backed `AsyncResolver` back to `ThreadedResolver`) -- but CI failed again anyway, at the exact same place. The reason: `pytest-aiohttp` and `pytest-homeassistant-custom-component` load as entry-point plugins during pytest's own startup, *before* any conftest.py -- even the rootdir one -- is collected. By the time `tests/conftest.py` runs, `aiohttp.resolver`'s module-level resolver selection can already be cached. No conftest.py-level fix can reliably win that race.
+
+Fixed by not racing it at all: `.github/workflows/test.yml` now uninstalls `aiodns`/`pycares` immediately after `pip install -r requirements_test.txt`, so they simply aren't present in the environment for anything to import, at any point, regardless of load order. The conftest.py block stays as a documented best-effort fallback for local runs that don't follow that workflow step, with its comment corrected to no longer claim it's sufficient on its own.
+
 ## 0.3.7 — Fix the lingering thread at its actual scope: the whole test session
 
 0.3.6's fix (forcing `ThreadedResolver` on `test_api.py`'s own session) worked exactly as intended — `test_api.py` now passes with zero errors — but the identical failure immediately reappeared one file later, in `test_config_flow.py::test_full_flow_creates_entry`, the first test that exercises the real `async_setup_entry` path through Home Assistant's own `async_get_clientsession(hass)`. Confirmed via the pasted CI log this was the same mechanism, not a new bug: aiohttp's pycares-vs-plain resolver selection happens once, at `aiohttp.resolver` module import time, and is cached for the rest of the process — whichever `ClientSession` gets constructed *first* anywhere in the whole test session (mine or Home Assistant's own internals) triggers it. Patching individual fixtures was always going to be whack-a-mole against that.

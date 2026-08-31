@@ -14,24 +14,27 @@ import sys
 import pytest
 
 # aiohttp auto-selects a pycares/aiodns-backed DNS resolver instead of its
-# plain ThreadedResolver whenever aiodns happens to be importable (it's a
-# transitive dependency here, via pytest-homeassistant-custom-component /
-# homeassistant core). That selection is computed once, at aiohttp.resolver
-# module import time, and cached module-wide for the rest of the process --
-# whichever ClientSession gets constructed *first* anywhere in the whole
-# test session (test code or Home Assistant's own internals) triggers it.
-# A pycares shutdown-logic regression now leaves a lingering
-# `_run_safe_shutdown_loop` thread behind purely from that selection, which
-# HA's own strict thread-leak-detecting test fixture then fails on --
-# confirmed against a real, currently-open upstream issue rather than
-# guessed: github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219.
-# Blocking the aiodns import here, before anything else in the test session
-# gets a chance to trigger that selection, fixes it at the actual root
-# cause in one place rather than in every individual fixture that happens
-# to construct a session. `sys.modules[name] = None` is the documented
-# CPython mechanism for making a future `import name` raise ImportError --
-# exactly the branch aiohttp.resolver's own `try: import aiodns / except
-# ImportError` already expects and falls back cleanly from.
+# plain ThreadedResolver whenever aiodns is importable. A pycares
+# shutdown-logic regression now leaves a lingering `_run_safe_shutdown_loop`
+# thread behind purely from that resolver being *selected* -- no actual DNS
+# traffic needed -- which HA's own strict thread-leak-detecting test
+# fixture then fails on. See
+# github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219
+# (open, no released fix).
+#
+# This `sys.modules["aiodns"] = None` block (the documented CPython
+# mechanism for making a future `import aiodns` raise ImportError, which
+# aiohttp.resolver's own `try/except ImportError` already falls back
+# cleanly from) is a best-effort local fallback, not the authoritative
+# fix -- confirmed insufficient on its own in real CI: pytest-aiohttp and
+# pytest-homeassistant-custom-component are loaded as entry-point plugins
+# during pytest's own startup, before any conftest.py (even this one) is
+# collected, so aiohttp.resolver's DefaultResolver can already be cached
+# by the time this line runs. The actual fix is in
+# .github/workflows/test.yml: uninstalling aiodns/pycares outright, which
+# removes the possibility regardless of import timing. This block is kept
+# for anyone running the test suite locally with aiodns installed and
+# without following that workflow step.
 sys.modules["aiodns"] = None  # type: ignore[assignment]
 
 pytest_plugins = "pytest_homeassistant_custom_component"

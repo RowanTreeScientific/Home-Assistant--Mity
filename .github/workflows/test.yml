@@ -18,6 +18,23 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: pip install -r requirements_test.txt
+      - name: Remove aiodns/pycares
+        # aiohttp auto-selects a pycares-backed DNS resolver instead of its
+        # plain ThreadedResolver whenever aiodns is importable -- it's a
+        # transitive dependency here (via homeassistant core, which wants
+        # it for production DNS performance, irrelevant to tests). A
+        # pycares shutdown-logic regression now leaves a lingering thread
+        # behind purely from that resolver being *selected*, not from any
+        # actual DNS traffic -- and it's selected once, at aiohttp.resolver
+        # import time, by whichever plugin/module imports it first. Since
+        # pytest-aiohttp/pytest-homeassistant-custom-component are loaded
+        # as entry-point plugins during pytest's own startup -- before any
+        # conftest.py runs -- a sys.modules-based import block inside
+        # conftest.py can't reliably win that race (confirmed: it didn't).
+        # Actually uninstalling the packages removes the possibility
+        # entirely, regardless of import timing. See
+        # github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219.
+        run: pip uninstall -y aiodns pycares
       - name: Ruff
         run: ruff check custom_components tests
       - name: Pytest
