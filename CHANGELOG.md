@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6 — Actually fix the lingering thread (root cause, not symptom)
+
+0.3.5's rewrite eliminated all real HTTP traffic, but the exact same `_run_safe_shutdown_loop` teardown failure recurred anyway, at the exact same test (`test_enroll_success`, the first async test in the whole session) — direct evidence the earlier "real network traffic" hypothesis was wrong. Checked whether this was a known upstream issue rather than guessing further: it is — [pytest-homeassistant-custom-component#219](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219), open, no released fix. `pycares` (aiohttp's optional C-ares DNS resolver, pulled in transitively) changed its shutdown logic and now leaves this exact thread behind, unrelated to whether any request was ever made — merely being aiohttp's *auto-selected* resolver is enough, and resolver selection happens at `ClientSession`/`TCPConnector` construction, before any traffic occurs.
+
+Fixed by explicitly constructing the test session's `TCPConnector` with aiohttp's plain `ThreadedResolver`, bypassing the auto-detection that would otherwise prefer the pycares-backed one whenever it happens to be installed. Deterministic regardless of environment; doesn't require waiting on the upstream fix.
+
 ## 0.3.5 — Rewrite test_api.py to eliminate real socket usage entirely
 
 The 0.3.4 `enable_socket` marker fixed the immediate `SocketBlockedError`s but only papered over a deeper problem: allowing real (even loopback) network I/O let `test_enroll_success` trigger Python 3.12's asyncio default-executor watchdog thread on real request completion, which HA's own strict thread-leak-detecting test fixture then failed on (found from the actual CI log, pasted directly — `AssertionError` in `pytest_homeassistant_custom_component.plugins.verify_cleanup`, a `Thread-1 (_run_safe_shutdown_loop)` left behind). Real bug in the test's design, not in `coordinator.py`/`api.py`.

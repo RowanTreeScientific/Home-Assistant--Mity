@@ -124,9 +124,25 @@ def _mock_exception(session, exception: Exception) -> None:
 
 @pytest.fixture
 async def session():
-    from aiohttp import ClientSession
+    """A real ClientSession, but pinned to aiohttp's plain ThreadedResolver.
 
-    async with ClientSession() as s:
+    aiohttp auto-picks a pycares/aiodns-backed resolver instead whenever
+    aiodns happens to be importable in the environment (it's a transitive
+    dependency of pytest-homeassistant-custom-component). A pycares
+    shutdown-logic change upstream now leaves a lingering
+    `_run_safe_shutdown_loop` thread behind
+    (github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219),
+    which HA's own strict thread-leak-detecting test fixture then fails
+    on -- confirmed as the actual root cause via the real CI log, after
+    two earlier (wrong) hypotheses about real network I/O. Forcing the
+    plain resolver here is deterministic regardless of what else is
+    installed, and needs no upstream fix to land first.
+    """
+    from aiohttp import ClientSession, TCPConnector
+    from aiohttp.resolver import ThreadedResolver
+
+    connector = TCPConnector(resolver=ThreadedResolver())
+    async with ClientSession(connector=connector) as s:
         yield s
 
 
