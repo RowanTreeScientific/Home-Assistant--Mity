@@ -11,9 +11,21 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.mity.api import EnrollmentResult, MityInvalidEnrollCodeError
-from custom_components.mity.const import DOMAIN
+from custom_components.mity.api import (
+    EnrollmentResult,
+    MityInvalidEnrollCodeError,
+    MityRejoinNotPermittedError,
+)
+from custom_components.mity.const import (
+    CONF_BASE_URL,
+    CONF_DEVICE_API_KEY,
+    CONF_INSTANCE_ID,
+    CONF_REJOIN_TOKEN,
+    CONF_STUDY_NICKNAME,
+    DOMAIN,
+)
 
 VALID_ENROLL_INPUT = {
     "base_url": "http://api.mi-ty-tre.co.uk",
@@ -123,6 +135,92 @@ async def test_second_study_creates_separate_entry(
     entries = hass.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
     assert {e.data["instance_id"] for e in entries} == {42, 99}
+
+
+def _make_entry() -> MockConfigEntry:
+    return MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="42",
+        title="Test Study",
+        data={
+            CONF_BASE_URL: "http://api.mi-ty-tre.co.uk",
+            CONF_INSTANCE_ID: 42,
+            CONF_DEVICE_API_KEY: "stale-key",
+            CONF_REJOIN_TOKEN: "rejoin-token",
+            CONF_STUDY_NICKNAME: "Test Study",
+        },
+        options={"scan_interval_minutes": 240, "paused": False},
+    )
+
+
+async def _start_reauth(hass: HomeAssistant, entry: MockConfigEntry):
+    return await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+            "unique_id": entry.unique_id,
+        },
+        data=entry.data,
+    )
+
+
+async def test_reauth_via_rejoin_succeeds(hass: HomeAssistant) -> None:
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.mity.config_flow.MityApiClient.rejoin",
+        new_callable=AsyncMock,
+        return_value=EnrollmentResult(
+            instance_id=42, device_api_key="fresh-key", rejoin_token="fresh-rejoin"
+        ),
+    ):
+        result = await _start_reauth(hass, entry)
+        assert result["step_id"] == "reauth_confirm"
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {}
+        )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_DEVICE_API_KEY] == "fresh-key"
+    assert entry.data[CONF_REJOIN_TOKEN] == "fresh-rejoin"
+    assert entry.data[CONF_INSTANCE_ID] == 42
+
+
+async def test_reauth_falls_back_to_new_code(hass: HomeAssistant) -> None:
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.mity.config_flow.MityApiClient.rejoin",
+        new_callable=AsyncMock,
+        side_effect=MityRejoinNotPermittedError(),
+    ):
+        result = await _start_reauth(hass, entry)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {}
+        )
+
+    assert result["step_id"] == "reauth_new_code"
+
+    with patch(
+        "custom_components.mity.config_flow.MityApiClient.enroll",
+        new_callable=AsyncMock,
+        return_value=EnrollmentResult(
+            instance_id=77, device_api_key="new-device-key", rejoin_token="new-rejoin"
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"enroll_code": "a-fresh-code"}
+        )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_INSTANCE_ID] == 77
+    assert entry.data[CONF_DEVICE_API_KEY] == "new-device-key"
 
 
 async def test_requires_terms_agreement(hass: HomeAssistant, mock_enroll) -> None:

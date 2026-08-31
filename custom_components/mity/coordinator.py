@@ -142,6 +142,12 @@ class MityCoordinator(DataUpdateCoordinator[MityData]):
             self.hass.bus.async_fire(
                 EVENT_DATA_ERROR, {"reason": "auth", "error": str(err)}
             )
+            # The device's own key was rejected -- likely revoked on the
+            # MiTY side outside this integration's knowledge. Prompt the
+            # user to reauthenticate rather than just failing silently
+            # forever; config_flow.py's reauth step tries the stored
+            # rejoin token first.
+            self.entry.async_start_reauth(self.hass)
             return None
         except MityConnectionError as err:
             self._record_error(str(err))

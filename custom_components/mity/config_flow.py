@@ -20,8 +20,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import (
     MityApiClient,
+    MityApiError,
     MityConnectionError,
     MityInvalidEnrollCodeError,
+    MityRejoinNotPermittedError,
 )
 from .const import (
     CONF_BASE_URL,
@@ -213,6 +215,86 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         return MityOptionsFlow(config_entry)
+
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> Any:
+        """Entered automatically when a submission gets a 401/403 from MiTY.
+
+        Triggered by `coordinator.py` calling `entry.async_start_reauth()`
+        on a `MityAuthError` -- e.g. an admin revoked this device's key on
+        the MiTY side. Try the stored rejoin token first, since that's the
+        credential designed to survive a revoked ingest key; fall back to
+        asking for a fresh enrollment code only if the trial's rejoin
+        policy blocks that.
+        """
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> Any:
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            session = async_get_clientsession(self.hass)
+            client = MityApiClient(session, entry.data[CONF_BASE_URL])
+            try:
+                result = await client.rejoin(entry.data[CONF_REJOIN_TOKEN])
+            except MityRejoinNotPermittedError:
+                return await self.async_step_reauth_new_code()
+            except MityConnectionError:
+                errors["base"] = "cannot_connect"
+            except MityApiError:
+                errors["base"] = "unknown"
+            else:
+                return await self._finish_reauth(entry, result)
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({}),
+            errors=errors,
+            description_placeholders={"nickname": entry.title},
+        )
+
+    async def async_step_reauth_new_code(
+        self, user_input: dict[str, Any] | None = None
+    ) -> Any:
+        """Fallback when the trial's policy is 'new_identity_required'."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            session = async_get_clientsession(self.hass)
+            client = MityApiClient(session, entry.data[CONF_BASE_URL])
+            try:
+                result = await client.enroll(user_input[CONF_ENROLL_CODE])
+            except MityInvalidEnrollCodeError:
+                errors["base"] = "invalid_enroll_code"
+            except MityConnectionError:
+                errors["base"] = "cannot_connect"
+            except MityApiError:
+                errors["base"] = "unknown"
+            else:
+                return await self._finish_reauth(entry, result)
+
+        return self.async_show_form(
+            step_id="reauth_new_code",
+            data_schema=vol.Schema({vol.Required(CONF_ENROLL_CODE): str}),
+            errors=errors,
+            description_placeholders={"nickname": entry.title},
+        )
+
+    async def _finish_reauth(self, entry: ConfigEntry, result: Any) -> Any:
+        self.hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_INSTANCE_ID: result.instance_id,
+                CONF_DEVICE_API_KEY: result.device_api_key,
+                CONF_REJOIN_TOKEN: result.rejoin_token,
+            },
+        )
+        await self.hass.config_entries.async_reload(entry.entry_id)
+        return self.async_abort(reason="reauth_successful")
 
 
 class MityOptionsFlow(OptionsFlow):

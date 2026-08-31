@@ -1,0 +1,6 @@
+# See https://help.github.com/articles/about-codeowners/
+# for more info about CODEOWNERS file
+
+# Every integration change should be reviewed by the integration's owner(s),
+# matching the `codeowners` list in custom_components/mity/manifest.json.
+/custom_components/mity/ @robsalter

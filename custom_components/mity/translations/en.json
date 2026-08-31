@@ -27,6 +27,18 @@
         "data": {
           "scan_interval_minutes": "Every (minutes)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect to MiTY",
+        "description": "\"{nickname}\" was rejected by MiTY on its last submission -- this usually means the device's key was revoked or reset on the MiTY side. Home Assistant will try to reconnect using this device's stored rejoin credential. Your parameter mapping and frequency won't change.",
+        "data": {}
+      },
+      "reauth_new_code": {
+        "title": "New enrollment code needed",
+        "description": "\"{nickname}\" can no longer rejoin automatically -- this trial requires a fresh enrollment after leaving. Enter a current enrollment code for this study to reconnect \"{nickname}\" under a new device identity. Your parameter mapping and frequency won't change.",
+        "data": {
+          "enroll_code": "Study enrollment code"
+        }
       }
     },
     "error": {
@@ -36,7 +48,8 @@
       "unknown": "An unexpected error occurred."
     },
     "abort": {
-      "already_configured": "This MiTY device is already configured."
+      "already_configured": "This MiTY device is already configured.",
+      "reauth_successful": "Reconnected to MiTY successfully."
     }
   },
   "options": {

@@ -158,7 +158,9 @@ ruff check custom_components tests
 pytest
 ```
 
-`tests/test_api.py` and `tests/test_coordinator_helpers.py` exercise pure logic (the HTTP client, value coercion) with no Home Assistant dependency. `tests/test_config_flow.py` needs a real Home Assistant test environment (via `pytest-homeassistant-custom-component`, installed by `requirements_test.txt`) — the recommended way to get one is the [Home Assistant integration dev container](https://developers.home-assistant.io/docs/development_environment/).
+`tests/test_api.py` and `tests/test_coordinator_helpers.py` exercise pure logic (the HTTP client, value coercion) with no Home Assistant dependency. The rest of `tests/` needs a real Home Assistant test environment (via `pytest-homeassistant-custom-component`, installed by `requirements_test.txt`) — the recommended way to get one is the [Home Assistant integration dev container](https://developers.home-assistant.io/docs/development_environment/).
+
+To try the integration against a real local Home Assistant instance rather than just running the test suite, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).
 
 ## Roadmap
 
@@ -168,7 +170,7 @@ pytest
 - [x] **Milestone 4** — Pass/fail events + automations, pause/leave/rejoin
 - [ ] **Milestone 5** — Insights + home health score polling — [API confirmed](docs/DESIGN_NOTES.md), backend implementation pending, HA side not yet built
 - [x] **Milestone 6** — Joinable research studies — join/leave already works via one config entry per study; a public "browse studies" discovery API is [proposed, not yet confirmed](docs/DESIGN_NOTES.md)
-- [ ] **Milestone 7** — HACS default-store community release (brand assets, quality-scale documentation)
+- [x] **Milestone 7** — HACS release polish — reauth flow, release automation, [quality-scale self-assessment](docs/QUALITY_SCALE.md); default-store submission itself needs a few remaining human/GitHub actions, tracked in [docs/HACS_RELEASE_CHECKLIST.md](docs/HACS_RELEASE_CHECKLIST.md) (repo topics, a cut release, and — the one still genuinely open — brand/logo assets, since MiTY doesn't have one yet)
 
 ## Contributing
 
