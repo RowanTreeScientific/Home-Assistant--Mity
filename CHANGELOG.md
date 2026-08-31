@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.10 — Exact-pin pycares instead of a range
+
+0.3.9's `pycares<4.9.0` range pin let `pytest (3.13)`'s "Install dependencies" step fail outright, taking `pytest (3.12)` down with it via matrix fail-fast before it even ran. Reproduced locally: a loose range gives pip's resolver room to wander backward through every version with no prebuilt wheel for the running Python (interacting with `pytest-homeassistant-custom-component`'s own transitive constraints), landing on `pycares==4.1.1` -- whose sdist is genuinely broken (`FileNotFoundError: PYPIREADME.rst`, a packaging bug in that release, unrelated to anything in this project).
+
+Fixed by pinning the exact version instead of a range: `pycares==4.8.0`, confirmed via PyPI's own file listing to have real prebuilt manylinux wheels for both `cp312` and `cp313` on `x86_64` (what GitHub's `ubuntu-latest` runners need) -- an exact pin gives the resolver no room to wander into anything else.
+
 ## 0.3.9 — The actual fix: pin pycares, don't remove or block it
 
 0.3.8's "uninstall aiodns/pycares" fix stopped the lingering-thread symptom, but broke 9 real tests with `RuntimeError: Resolver requires aiodns library` — the actual CI traceback (pasted directly) pinpointed why: `homeassistant/helpers/aiohttp_client.py` constructs `resolver=AsyncResolver()` directly, with **no fallback to `ThreadedResolver`**. `async_get_clientsession(hass)` -- which this integration's own `config_flow.py`/`__init__.py` call, matching real production behaviour -- hard-requires aiodns to be genuinely present and working. Both this attempt and 0.3.7's `sys.modules` block were fighting a dependency that has to stay functional; there was never a way to block or remove it without breaking real code paths this test suite legitimately needs to exercise.

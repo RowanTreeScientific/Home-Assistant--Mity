@@ -11,7 +11,12 @@ mypy>=1.11.0
 # blocked, confirmed the hard way (see CHANGELOG.md 0.3.8/0.3.9). pycares
 # >=4.9.0 (released 2025-06-12) changed its shutdown logic and now leaves
 # a lingering `_run_safe_shutdown_loop` thread behind on every use, which
-# HA's own strict thread-leak-detecting test fixture fails on. Pin below
-# that until github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219
-# is resolved upstream; remove this pin once it is.
-pycares<4.9.0
+# HA's own strict thread-leak-detecting test fixture fails on. Pinned
+# to an EXACT version, not a range (`<4.9.0` let pip's resolver wander
+# backward into versions with no prebuilt wheel for the running Python,
+# landing on 4.1.1's genuinely broken sdist -- confirmed the hard way,
+# see CHANGELOG.md 0.3.10). 4.8.0 has real manylinux wheels for both
+# cp312 and cp313, confirmed on PyPI. Remove this pin once
+# github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219
+# is resolved upstream.
+pycares==4.8.0
