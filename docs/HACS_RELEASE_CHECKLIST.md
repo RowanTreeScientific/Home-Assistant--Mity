@@ -6,20 +6,20 @@ Everything below needs a repo-owner action on GitHub itself (repo settings, a si
 
 ## 1. Repository settings
 
-- [ ] **Add GitHub topics**: `home-assistant`, `hacs-integration`, `hacs`, plus a topic for the domain (`mity`). Settings → General → Topics (or the gear icon next to "About" on the repo's main page).
-- [ ] **Add a repository description** matching `info.md`'s summary, and the homepage URL (`https://www.mi-ty-tre.co.uk`) in the same "About" panel.
-- [ ] **Confirm the repository is public.** HACS cannot install from a private repository even as a custom repo, let alone the default store.
+- [x] **Add GitHub topics**: `home-assistant`, `hacs-integration`, `hacs`, `mity`. Done via `gh repo edit --add-topic`.
+- [ ] **Add a repository description** matching `info.md`'s summary, and the homepage URL (`https://www.mi-ty-tre.co.uk`) in the same "About" panel. Not yet confirmed done.
+- [ ] **Confirm the repository is public.** HACS cannot install from a private repository even as a custom repo, let alone the default store. Not yet explicitly confirmed either way.
 
 ## 2. Cut a real release
 
-`.github/workflows/release.yml` (already added) auto-creates a GitHub Release with generated notes whenever a `v*.*.*` tag is pushed — HACS reads actual Release objects, not bare git tags, so this step matters. To cut the first release:
+`.github/workflows/release.yml` (already added) auto-creates a GitHub Release with generated notes whenever a `v*.*.*` tag is pushed — HACS reads actual Release objects, not bare git tags, so this step matters.
+
+- [x] **v0.3.0 cut and confirmed live** on the repo's Releases page (2026-08-31). Repeat for every future version bump in `manifest.json`:
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
-
-Then check the **Actions** tab to confirm the `Release` workflow ran and a Release appeared under the repo's **Releases** page. Repeat for every future version bump in `manifest.json`.
 
 ## 3. Validate cleanly in CI
 
