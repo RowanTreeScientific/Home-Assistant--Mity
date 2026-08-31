@@ -8,4 +8,4 @@ Contribute selected Home Assistant sensor data to MiTY citizen-science research 
 - Pause or leave at any time; request deletion of your data.
 - Pass/fail events for your own automations.
 
-See the [README](https://github.com/rowantree-scientific/ha-mity#readme) for full setup instructions.
+See the [README](https://github.com/RowanTreeScientific/Home-Assistant--Mity#readme) for full setup instructions.
