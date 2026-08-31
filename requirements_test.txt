@@ -4,3 +4,14 @@ pytest-cov>=5.0.0
 pytest-homeassistant-custom-component>=0.13.0
 ruff>=0.6.0
 mypy>=1.11.0
+
+# Home Assistant's own aiohttp_client helper hard-requires aiodns/pycares
+# (homeassistant/helpers/aiohttp_client.py constructs AsyncResolver()
+# directly, no ThreadedResolver fallback) -- so it can't be removed or
+# blocked, confirmed the hard way (see CHANGELOG.md 0.3.8/0.3.9). pycares
+# >=4.9.0 (released 2025-06-12) changed its shutdown logic and now leaves
+# a lingering `_run_safe_shutdown_loop` thread behind on every use, which
+# HA's own strict thread-leak-detecting test fixture fails on. Pin below
+# that until github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219
+# is resolved upstream; remove this pin once it is.
+pycares<4.9.0

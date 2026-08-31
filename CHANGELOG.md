@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.9 — The actual fix: pin pycares, don't remove or block it
+
+0.3.8's "uninstall aiodns/pycares" fix stopped the lingering-thread symptom, but broke 9 real tests with `RuntimeError: Resolver requires aiodns library` — the actual CI traceback (pasted directly) pinpointed why: `homeassistant/helpers/aiohttp_client.py` constructs `resolver=AsyncResolver()` directly, with **no fallback to `ThreadedResolver`**. `async_get_clientsession(hass)` -- which this integration's own `config_flow.py`/`__init__.py` call, matching real production behaviour -- hard-requires aiodns to be genuinely present and working. Both this attempt and 0.3.7's `sys.modules` block were fighting a dependency that has to stay functional; there was never a way to block or remove it without breaking real code paths this test suite legitimately needs to exercise.
+
+Reverted both. The actual fix: pin `pycares<4.9.0` in `requirements_test.txt` -- 4.9.0 (released 2025-06-12) is the version that introduced the shutdown-logic regression (matches the timeline in [pytest-homeassistant-custom-component#219](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219), opened 2025-07-07 referencing a change "last month"). This keeps `aiodns`/`AsyncResolver` fully installed and selected, satisfying HA's hard requirement, while avoiding the specific buggy version. Verified directly: confirmed the pin resolves to 4.8.0, and confirmed `aiohttp.resolver.DefaultResolver` is still correctly `AsyncResolver` with it installed.
+
 ## 0.3.8 — Fix the lingering thread by removing the package, not racing its import
 
 0.3.7's `sys.modules["aiodns"] = None` conftest.py block was directly verified to work in isolation (confirmed `aiohttp.resolver.DefaultResolver` really does flip from the pycares-backed `AsyncResolver` back to `ThreadedResolver`) -- but CI failed again anyway, at the exact same place. The reason: `pytest-aiohttp` and `pytest-homeassistant-custom-component` load as entry-point plugins during pytest's own startup, *before* any conftest.py -- even the rootdir one -- is collected. By the time `tests/conftest.py` runs, `aiohttp.resolver`'s module-level resolver selection can already be cached. No conftest.py-level fix can reliably win that race.

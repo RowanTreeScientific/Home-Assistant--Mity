@@ -9,35 +9,21 @@ test_coordinator_helpers.py, which deliberately avoid this dependency.
 
 from __future__ import annotations
 
-import sys
-
 import pytest
 
-# aiohttp auto-selects a pycares/aiodns-backed DNS resolver instead of its
-# plain ThreadedResolver whenever aiodns is importable. A pycares
-# shutdown-logic regression now leaves a lingering `_run_safe_shutdown_loop`
-# thread behind purely from that resolver being *selected* -- no actual DNS
-# traffic needed -- which HA's own strict thread-leak-detecting test
-# fixture then fails on. See
-# github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219
-# (open, no released fix).
-#
-# This `sys.modules["aiodns"] = None` block (the documented CPython
-# mechanism for making a future `import aiodns` raise ImportError, which
-# aiohttp.resolver's own `try/except ImportError` already falls back
-# cleanly from) is a best-effort local fallback, not the authoritative
-# fix -- confirmed insufficient on its own in real CI: pytest-aiohttp and
-# pytest-homeassistant-custom-component are loaded as entry-point plugins
-# during pytest's own startup, before any conftest.py (even this one) is
-# collected, so aiohttp.resolver's DefaultResolver can already be cached
-# by the time this line runs. The actual fix is in
-# .github/workflows/test.yml: uninstalling aiodns/pycares outright, which
-# removes the possibility regardless of import timing. This block is kept
-# for anyone running the test suite locally with aiodns installed and
-# without following that workflow step.
-sys.modules["aiodns"] = None  # type: ignore[assignment]
-
 pytest_plugins = "pytest_homeassistant_custom_component"
+
+# Note on the lingering `_run_safe_shutdown_loop` thread issue some commits
+# on this branch chased: aiodns/pycares CANNOT be blocked or removed here.
+# homeassistant/helpers/aiohttp_client.py constructs `AsyncResolver()`
+# directly with no ThreadedResolver fallback, so async_get_clientsession()
+# -- which this integration's own config_flow.py/__init__.py call, matching
+# real production behaviour -- hard-requires aiodns to be genuinely
+# importable and working. The actual fix is a version pin in
+# requirements_test.txt (pycares<4.9.0, below the version that introduced
+# the shutdown-logic regression -- see
+# github.com/MatthewFlamm/pytest-homeassistant-custom-component/issues/219),
+# not anything in this file.
 
 
 @pytest.fixture(autouse=True)
