@@ -6,9 +6,9 @@ Everything below needs a repo-owner action on GitHub itself (repo settings, a si
 
 ## 1. Repository settings
 
-- [x] **Add GitHub topics**: `home-assistant`, `hacs-integration`, `hacs`, `mity`. Done via `gh repo edit --add-topic`.
-- [ ] **Add a repository description** matching `info.md`'s summary, and the homepage URL (`https://www.mi-ty-tre.co.uk`) in the same "About" panel. Not yet confirmed done.
-- [ ] **Confirm the repository is public.** HACS cannot install from a private repository even as a custom repo, let alone the default store. Not yet explicitly confirmed either way.
+- [x] **Add GitHub topics**: `home-assistant`, `hacs-integration`, `hacs`, `mity`. Done via `gh repo edit --add-topic`; confirmed live.
+- [x] **Add a repository description and homepage URL.** Confirmed live: description "Contribute Home Assistant sensor data to MiTY citizen-science research", homepage `www.mi-ty-tre.co.uk`.
+- [x] **Repository is public.** Confirmed.
 
 ## 2. Cut a real release
 
