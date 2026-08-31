@@ -5,6 +5,14 @@ server) rather than mocking internals, so they double as a check that the
 client's request/response handling actually matches the wire contract in
 "Citizen Science AutoEnrollment Design 20260831.md". They have no
 dependency on Home Assistant itself.
+
+`aiohttp.test_utils.TestServer` binds a real (loopback-only) socket, which
+`pytest-homeassistant-custom-component` blocks globally via `pytest-socket`
+to keep HA's own test suite from ever touching the network. `enable_socket`
+is that plugin's own purpose-built escape hatch for exactly this case -- a
+local test server, not real network egress -- and is a no-op (unrecognised
+marker, harmless) when this file runs standalone without HA installed, as
+it's designed to.
 """
 
 from __future__ import annotations
@@ -16,6 +24,8 @@ from pathlib import Path
 import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
+
+pytestmark = pytest.mark.enable_socket
 
 
 def _load_api_module():

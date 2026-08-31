@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4 — Fix remaining socket-blocked tests
+
+The 0.3.3 socket fix only covered `test_connection_error`; 9 other tests in `tests/test_api.py` use a *different* real-socket mechanism — the `client` fixture spins up a real `aiohttp.test_utils.TestServer` to exercise `MityApiClient` end-to-end over actual HTTP, and binding that loopback server also trips `pytest-homeassistant-custom-component`'s global `pytest-socket` guard. Found from the actual CI failure log (pasted directly this time, all 9 `SocketBlockedError`s). Fixed with `pytest-socket`'s own purpose-built escape hatch — `pytestmark = pytest.mark.enable_socket` at module level — rather than rewriting the tests to avoid a real server. Verified directly: installed `pytest-socket` locally and ran the suite with `--disable-socket` (the same mechanism the HA plugin uses), confirming the marker genuinely re-enables the loopback server rather than being silently ignored.
+
 ## 0.3.3 — Fix real config flow bug + a test relying on real sockets
 
 Found via the CI log after 0.3.2 fixed collection and CI could finally run to completion:
