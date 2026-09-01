@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.11 — CI fully green; bump actions off deprecated Node 20
+
+**CI confirmed fully green end-to-end** for the first time: `hassfest` and both `pytest (3.12)`/`pytest (3.13)` all pass (`Tests` workflow conclusion: success). `Validate`'s `hacs` job remains red only on the known, tracked brand-assets gap.
+
+Bumped `actions/checkout@v4` → `@v7` and `actions/setup-python@v5` → `@v7` across all three workflows (`test.yml`, `validate.yml`, `release.yml`), clearing a "Node.js 20 is deprecated" warning — confirmed both new major versions declare `using: node24` in their own `action.yml` before bumping, not just picked the latest tag blindly.
+
 ## 0.3.10 — Exact-pin pycares instead of a range
 
 0.3.9's `pycares<4.9.0` range pin let `pytest (3.13)`'s "Install dependencies" step fail outright, taking `pytest (3.12)` down with it via matrix fail-fast before it even ran. Reproduced locally: a loose range gives pip's resolver room to wander backward through every version with no prebuilt wheel for the running Python (interacting with `pytest-homeassistant-custom-component`'s own transitive constraints), landing on `pycares==4.1.1` -- whose sdist is genuinely broken (`FileNotFoundError: PYPIREADME.rst`, a packaging bug in that release, unrelated to anything in this project).
