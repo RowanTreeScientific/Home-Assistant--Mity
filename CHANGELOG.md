@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.13 — Consistent icon set, still placeholder-quality
+
+`icon@2x.png` was swapped for a full "MiTY TRE" text-lockup design (by choice, not the original icon-only mark). Regenerated `icon.png` from the same source scaled down, so the 1x/2x icon pair shows the same design consistently rather than two different logos at two different sizes. Still soft/low-resolution throughout — see `assets/brand/README.md`.
+
 ## 0.3.12 — Placeholder brand assets
 
 A real MiTY logo (`docs/Mity logo.png`, `docs/Mity logo with text.png`) was added to the project. Generated placeholder `icon.png`/`icon@2x.png`/`logo.png`/`logo@2x.png` at [assets/brand/](assets/brand/), at the exact sizes `home-assistant/brands` requires — upscaled from the low-resolution sources (79×71px original), so soft rather than crisp; explicitly documented as not submission-quality in `assets/brand/README.md`, not silently presented as finished. Excluded two unrelated MiTY-website marketing images (hero banners, ~4MB combined) that landed in the same `docs/` drop from version control via `.gitignore` — they aren't this integration's brand assets.
