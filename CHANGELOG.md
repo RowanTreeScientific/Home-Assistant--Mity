@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.4.0 — Migrate to HERD-IoT Implementation Guide v1.0
+## 0.4.1 — Correction: revert the wrong HERD-IoT migration, add the real `_meta`
+
+**0.4.0's premise was wrong.** "The MiTY backend is being rebuilt against the HERD-IoT Implementation Guide v1.0" was not correct — that guide is the *formal*, aspirational HERD-IoT specification from the PhD portfolio, not the live backend's actual contract, which never changed: a flat JSON body over `POST /v1/ingest`, exactly as built in Milestones 1–4. Confirmed directly via the platform team's own API specification document.
+
+- **Reverted**: `uuid7.py`, `submit_herd_entities()`/`HerdSubmitResult`/`HerdObservationResult`, the `HERD_CHANNEL_ENVELOPE` domain/measure/unitCode table, `HERD_PROGRAMME_ID`/`HERD_PROVIDER`, the `urn:herd-iot:...` identifier construction, and `/api/v1/herd/direct` — none of it has anywhere to go against the real backend. `coordinator.py`/`api.py`/`config_flow.py` are back to calling `POST /v1/ingest` with `Authorization: Bearer <deviceApiKey>`.
+- **Added for real this time**: an optional `deviceId` field (derived from the study nickname) and an optional `_meta` block (`deviceProvenance` + `zone`, both genuinely free text, no enforced vocabulary) sent inline on the ingest body — confirmed against the real `_meta` contract in the platform team's spec, not invented. One shared value per submission (a single ingest call already bundles every mapped channel), not per-channel like the reverted version wrongly modelled it.
+- Config flow's old per-channel `zones` + separate `device_provenance` steps collapsed into one combined, fully optional `device_details` step matching that one-value-per-submission shape.
+
+See [docs/HERD_IOT_MIGRATION.md](docs/HERD_IOT_MIGRATION.md) (rewritten) for the full corrected picture and what's still not built (`_meta.fields` per-channel descriptions, the explicit device-profile set/get endpoints, the newer recognised terms beyond the original four channels).
+
+## 0.4.0 — Migrate to HERD-IoT Implementation Guide v1.0 (reverted, see 0.4.1)
 
 **The MiTY backend is being rebuilt against a new, formal data specification** (the HERD-IoT Implementation Guide v1.0, Rowan Tree Scientific), which supersedes the flat JSON body this integration previously sent to `/v1/ingest`. This release migrates the submission pipeline to match.
 

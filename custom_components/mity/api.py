@@ -19,14 +19,6 @@ import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
-# Kept as a literal here, matching every other endpoint path in this file,
-# rather than imported from const.py -- this module is deliberately kept
-# free of any relative import (even to const.py) so it can be loaded
-# standalone by file path in tests/test_api.py without needing the rest
-# of the package (or Home Assistant) importable. See that file's module
-# docstring for the exact failure mode a relative import here reintroduces.
-HERD_DIRECT_PATH = "/api/v1/herd/direct"
-
 
 class MityApiError(Exception):
     """Base error for any MiTY API failure."""
@@ -87,42 +79,10 @@ class RemovalResult:
 
 @dataclass
 class IngestResult:
-    """Response to a legacy flat /v1/ingest submission.
-
-    Superseded by HerdSubmitResult / submit_herd_entities() now that the
-    backend is being rebuilt against the HERD-IoT Implementation Guide
-    v1.0 -- kept only because the flat /v1/ingest endpoint may still be
-    live during the migration; see uses in coordinator.py.
-    """
+    """Response to a data submission."""
 
     success: bool
     submission_id: Any
-
-
-@dataclass
-class HerdObservationResult:
-    """Per-observation outcome from a HERD-IoT direct submission."""
-
-    observation_id: str | None
-    status: str
-    tier: str | None
-    errors: list[str]
-    warnings: list[str]
-
-    @property
-    def accepted(self) -> bool:
-        return self.status == "accepted"
-
-
-@dataclass
-class HerdSubmitResult:
-    """Response to POST /api/v1/herd/direct -- one result per entity sent."""
-
-    results: list[HerdObservationResult]
-
-    @property
-    def all_accepted(self) -> bool:
-        return bool(self.results) and all(r.accepted for r in self.results)
 
 
 class MityApiClient:
@@ -254,53 +214,6 @@ class MityApiClient:
             cooloff_ends_at=body.get("cooloffEndsAt"),
         )
 
-    async def submit_herd_entities(
-        self, device_api_key: str, entities: list[dict[str, Any]]
-    ) -> HerdSubmitResult:
-        """POST /api/v1/herd/direct -- HERD-IoT Spec v1.0 Pathway 1 (Direct Submission).
-
-        Body is always sent as a JSON array (Implementation Guide 5.2.1:
-        "a single... entity, or an array of entities for batch
-        submission" -- sending a one-element array works for either case
-        and keeps this method's response parsing uniform). Response
-        shape isn't fully specified for the batch case beyond "an array
-        of per-observation results" (5.2.3), so this tolerates either a
-        bare JSON array or a dict wrapping one under a "results" key,
-        and falls back to treating a single dict response (Figure 5.1's
-        shape) as a one-result list.
-
-        Bypasses the shared `_request()` helper deliberately: that
-        method assumes a dict-shaped body throughout (`body.get(...)`),
-        which a bare top-level JSON array response would break.
-        """
-        url = f"{self._base_url}{HERD_DIRECT_PATH}"
-        headers = self._auth_headers(device_api_key)
-        try:
-            async with self._session.request(
-                "POST", url, headers=headers, json=entities
-            ) as resp:
-                if resp.status in (401, 403):
-                    raise MityAuthError(f"POST {HERD_DIRECT_PATH} -> {resp.status}")
-                if resp.status == 429:
-                    raise MityRateLimitedError(
-                        f"POST {HERD_DIRECT_PATH} rate limited"
-                    )
-                raw: Any = None
-                if resp.content_length or resp.headers.get(
-                    "content-type", ""
-                ).startswith("application/json"):
-                    try:
-                        raw = await resp.json(content_type=None)
-                    except (aiohttp.ContentTypeError, ValueError):
-                        raw = None
-                if resp.status >= 400:
-                    raise MityApiError(
-                        f"POST {HERD_DIRECT_PATH} -> {resp.status}: {raw}"
-                    )
-                return _parse_herd_submit_response(raw)
-        except aiohttp.ClientError as err:
-            raise MityConnectionError(str(err)) from err
-
     async def rejoin(self, rejoin_token: str) -> EnrollmentResult:
         """Call POST /v1/citizen-science/rejoin using the stored rejoin token.
 
@@ -318,30 +231,3 @@ class MityApiClient:
             device_api_key=body["deviceApiKey"],
             rejoin_token=body["rejoinToken"],
         )
-
-
-def _parse_herd_observation_result(item: dict[str, Any]) -> HerdObservationResult:
-    validation = item.get("validationResult") or {}
-    return HerdObservationResult(
-        observation_id=item.get("observationId") or item.get("id"),
-        status=str(item.get("status", "unknown")),
-        tier=validation.get("tier"),
-        errors=list(validation.get("errors") or []),
-        warnings=list(validation.get("warnings") or []),
-    )
-
-
-def _parse_herd_submit_response(raw: Any) -> HerdSubmitResult:
-    """Normalise whichever of the response shapes described in
-    submit_herd_entities()'s docstring the server actually returned."""
-    if isinstance(raw, list):
-        items = raw
-    elif isinstance(raw, dict) and isinstance(raw.get("results"), list):
-        items = raw["results"]
-    elif isinstance(raw, dict) and raw:
-        items = [raw]
-    else:
-        items = []
-    return HerdSubmitResult(
-        results=[_parse_herd_observation_result(item) for item in items]
-    )

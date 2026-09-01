@@ -36,17 +36,16 @@ Go to **Settings → Devices & Services → Add Integration** and search for **M
 - The **MiTY endpoint URL** for the platform you're contributing to.
 - The **enrollment code** for the specific study you're joining (provided by the study — e.g. a QR code or printed code on the study's own materials). This is *not* a personal password; it's shared by everyone enrolling in that study.
 
-The setup flow has five steps:
+The setup flow has four steps:
 
 1. **Connect** — enter the endpoint and enrollment code, optionally name the study, and agree to the [MiTY Terms & Conditions](https://www.mi-ty-tre.co.uk/terms). Nothing is enrolled until you agree.
 2. **Select parameters** — choose which of your existing Home Assistant entities to share. Every citizen-science trial currently shares one fixed set of fields: indoor temperature, indoor humidity, motion/occupancy, and energy usage. You can leave any of these blank.
-3. **Zones** — for each sensor you mapped, pick which room/zone it's in (required by the HERD-IoT data format — see [What gets sent](#what-gets-sent)).
-4. **Sensor details** *(optional)* — manufacturer, model, firmware version, calibration date, measurement uncertainty, and how the sensor connects. Skippable; used only to document measurement provenance for research purposes.
-5. **Set frequency** — how often (in minutes) your data is sent. Default 240 minutes; allowed range 60–10,080 minutes (1 hour to 1 week).
+3. **Sensor details** *(optional)* — which room/area your sensors are in, and manufacturer/model/connection-type details, if you'd like to share them. Entirely free text, entirely skippable — see [What gets sent](#what-gets-sent).
+4. **Set frequency** — how often (in minutes) your data is sent. Default 240 minutes; allowed range 60–10,080 minutes (1 hour to 1 week).
 
 On completion, MiTY creates a permanent, pseudonymous device identity for your installation and a device appears in Home Assistant, named after the study (or "MiTY Research" if you didn't give it a name).
 
-You can change your parameter mapping, zones, sensor details, frequency, and the study's display name at any time from the integration's **Configure** option, without re-enrolling.
+You can change your parameter mapping, sensor details, frequency, and the study's display name at any time from the integration's **Configure** option, without re-enrolling.
 
 ### Contributing to more than one study
 
@@ -56,32 +55,33 @@ Deleting a study's integration entry from Home Assistant automatically withdraws
 
 ## What gets sent
 
-Only the entities you explicitly map, on the schedule you set, as **HERD-IoT v1.0** observations (Rowan Tree Scientific's HERD-IoT Implementation Guide) — one JSON-LD entity per mapped sensor, submitted as a batch to `POST /api/v1/herd/direct`:
+Only the entities you explicitly map, on the schedule you set. Each submission looks like:
 
 ```json
 {
-  "id": "urn:herd-iot:MiTy-TRE:citizen-science:GDV-0000002a:living-room:env:temperature:sensor-living-room-temperature:0192e4a8-7b3c-7def-8123-4a5b6c7d8e9f",
-  "type": "HERDObservation",
-  "observedAt": "2026-08-31T18:00:00.000Z",
-  "hasSimpleResult": { "type": "Property", "value": 21.4, "unitCode": "DEG_C" },
-  "herdVersion": "1.0.0",
-  "deviceProvenance": {
-    "type": "Property",
-    "value": {
-      "manufacturer": "Aico",
-      "model": "Environmental Sensor Gen 3",
+  "deviceId": "indoor-air-study",
+  "timestamp": "2026-08-31T18:00:00+00:00",
+  "temperature": 21.4,
+  "humidity": 47.0,
+  "motion": false,
+  "energyUsage": 3.2,
+  "_meta": {
+    "deviceProvenance": {
+      "manufacturer": "Ecowitt",
+      "model": "WS90",
       "samplingInterval": 14400,
-      "communicationProtocol": "zigbee"
-    }
+      "communicationProtocol": "wifi"
+    },
+    "zone": "living-room"
   }
 }
 ```
 
-No entity IDs, friendly names, or anything else identifying your household is sent in plain form — the sensor identity in the URI (`sensor-living-room-temperature`) is derived from your entity ID but never reveals the value itself, and the property token is pseudonymous.
+`deviceId` is derived from your study's display name. `_meta` only appears if you filled in the optional **Sensor details** step (or its equivalent in **Configure**) — `deviceProvenance` and `zone` are free text on MiTY's side, not validated against a fixed list; the config flow suggests common values but happily accepts anything you type.
 
-`deviceProvenance` (manufacturer/model/firmware/calibration date/measurement uncertainty/communication protocol) only appears if you fill it in during setup — entirely optional, asked for once during setup or via **Configure**, and shared across every sensor you map in that pass.
+No entity IDs, friendly names, or anything else identifying your household is included — MiTY only ever sees the values above, tied to a pseudonymous device ID it assigned at enrollment.
 
-> **This is a live migration, not a finished integration.** The MiTY backend is being rebuilt against this spec at the time of writing, and several fields here are best-guess placeholders pending confirmation from the platform team — most importantly the pseudonymous property token, which this integration currently derives locally rather than receiving from a real Glass Door Vault enrollment (a real token can only come from the vault, by design). See [docs/HERD_IOT_MIGRATION.md](docs/HERD_IOT_MIGRATION.md) for the full list of what's confirmed vs. placeholder, and don't be surprised if `sensor.mity_status` shows `rejected` until the backend and this integration converge on the open items there.
+> **Coordination note for the MiTY platform team:** the raw field names above (`temperature`, `humidity`, `motion`, `energyUsage`) are this integration's proposal for the fixed `HERD_IOT:citizen.home-assistant` schema described in the citizen-science API design. If the platform's saved field-map ends up using different raw names, only [`const.py`](custom_components/mity/const.py)'s `CHANNEL_FIELD_NAMES` needs to change on this side.
 
 ## Entities
 
@@ -155,7 +155,7 @@ MiTY Research integration   (custom_components/mity)
       │
       ▼
 HERD_IOT client              (custom_components/mity/api.py)
-  enroll · policy · submitHerdEntities (/api/v1/herd/direct) · pause · remove · rejoin
+  enroll · policy · submit (/v1/ingest) · pause · remove · rejoin
       │
       ▼
 MiTY citizen-science API

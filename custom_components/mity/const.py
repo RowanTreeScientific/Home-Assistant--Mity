@@ -61,68 +61,43 @@ CHANNEL_DEVICE_CLASS: Final[dict[str, str]] = {
     OPT_ENTITY_ENERGY_USAGE: "energy",
 }
 
-# --- HERD-IoT envelope (Specification v1.0, Rowan Tree Scientific) ---
-#
-# Per-channel (domain, measure, unitCode) triples, drawn from the domain
-# and measure-type controlled vocabularies (Implementation Guide sections
-# 3.2.1/3.2.2). unitCode follows Table 3.3 ("DEG_C" for temperature); the
-# guide's own Figure 4.1 worked example uses "CEL" instead -- an apparent
-# inconsistency in the source document -- so this picks the vocabulary
-# table's value as authoritative over the example.
-HERD_CHANNEL_ENVELOPE: Final[dict[str, tuple[str, str, str]]] = {
-    OPT_ENTITY_TEMPERATURE: ("env", "temperature", "DEG_C"),
-    OPT_ENTITY_HUMIDITY: ("env", "humidity", "PERCENT"),
-    OPT_ENTITY_MOTION: ("structural", "occupancy", "DIMENSIONLESS"),
-    OPT_ENTITY_ENERGY_USAGE: ("energy", "kwh-import", "KiloW-HR"),
-}
+# --- Optional provenance/zone enrichment, sent inline as `_meta` on
+# /v1/ingest (see "MiTy - Home Assistant - API specification.md" section
+# 4). Free text on this backend -- no fixed vocabulary, unlike the
+# formal HERD-IoT Implementation Guide's Layer 2/3 concepts these are
+# loosely modelled on. One shared value per device/submission, not
+# per-channel: a single ingest call already bundles every mapped
+# channel's reading, so "which room is this device in" and "who made
+# this device" apply to the submission as a whole.
+OPT_ZONE: Final = "zone"
+OPT_DEVICE_MANUFACTURER: Final = "device_manufacturer"
+OPT_DEVICE_MODEL: Final = "device_model"
+OPT_DEVICE_COMM_PROTOCOL: Final = "device_comm_protocol"
 
-HERD_VERSION: Final = "1.0.0"
-
-# These two identifier components (Table 3.1, items 1-2) don't have an
-# obvious value for a self-enrolled citizen-science device -- "programme"
-# and "provider" are designed around a registered research programme and
-# a housing-provider organisation collecting on a resident's behalf,
-# neither of which exists in the anonymous auto-enrollment model. Fixed
-# placeholders pending confirmation from whoever owns the rebuilt backend;
-# see docs/HERD_IOT_MIGRATION.md.
-HERD_PROGRAMME_ID: Final = "MiTy-TRE"
-HERD_PROVIDER: Final = "citizen-science"
-
-# Zone Classification vocabulary (Table 3.4) -- code, label pairs for the
-# selector shown when mapping each sensor.
-HERD_ZONES: Final[tuple[tuple[str, str], ...]] = (
-    ("living-room", "Living Room / Lounge"),
-    ("kitchen", "Kitchen"),
-    ("bedroom-1", "Primary Bedroom"),
-    ("bedroom-2", "Secondary Bedroom"),
-    ("bathroom", "Bathroom"),
-    ("hallway", "Hallway / Corridor"),
-    ("ext-south", "External South Facade"),
-    ("ext-roof", "Roof / Loft Space"),
-    ("whole-property", "Whole Property"),
-    ("garage", "Garage / Outbuilding"),
+# Suggested values only (the backend enforces no vocabulary) -- shown as
+# a dropdown-with-custom-entry in the config flow so participants aren't
+# forced to spell out "wifi" from scratch, without pretending these are
+# the only valid answers.
+SUGGESTED_ZONES: Final[tuple[str, ...]] = (
+    "living-room",
+    "kitchen",
+    "bedroom-1",
+    "bedroom-2",
+    "bathroom",
+    "hallway",
+    "ext-south",
+    "ext-roof",
+    "whole-property",
+    "garage",
 )
-
-# Communication protocol vocabulary (section 4.3.1) for deviceProvenance.
-HERD_COMM_PROTOCOLS: Final[tuple[str, ...]] = (
+SUGGESTED_COMM_PROTOCOLS: Final[tuple[str, ...]] = (
     "wifi",
     "ble",
     "zigbee",
     "zwave",
     "lorawan",
     "mqtt",
-    "modbus",
-    "mbus",
 )
-
-# --- Options keys: per-channel zone + shared device provenance ---
-OPT_ZONE_PREFIX: Final = "zone_"  # + channel name, e.g. "zone_entity_temperature"
-OPT_DEVICE_MANUFACTURER: Final = "device_manufacturer"
-OPT_DEVICE_MODEL: Final = "device_model"
-OPT_DEVICE_FIRMWARE_VERSION: Final = "device_firmware_version"
-OPT_DEVICE_CALIBRATION_DATE: Final = "device_calibration_date"
-OPT_DEVICE_MEASUREMENT_UNCERTAINTY: Final = "device_measurement_uncertainty"
-OPT_DEVICE_COMM_PROTOCOL: Final = "device_comm_protocol"
 
 DEFAULT_BASE_URL: Final = "http://api.mi-ty-tre.co.uk"
 

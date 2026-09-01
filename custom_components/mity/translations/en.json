@@ -21,26 +21,14 @@
           "entity_energy_usage": "Energy usage sensor"
         }
       },
-      "zones": {
-        "title": "Where are these sensors?",
-        "description": "MiTY's HERD-IoT data format requires a room/zone for every observation. Choose the zone for each sensor you mapped in the previous step.",
-        "data": {
-          "zone_entity_temperature": "Zone for the temperature sensor",
-          "zone_entity_humidity": "Zone for the humidity sensor",
-          "zone_entity_motion": "Zone for the motion sensor",
-          "zone_entity_energy_usage": "Zone for the energy usage sensor"
-        }
-      },
-      "device_provenance": {
+      "device_details": {
         "title": "Sensor details (optional)",
-        "description": "Optional details about your sensor hardware. MiTY uses this to document measurement provenance for research purposes -- leave blank if you don't know or don't want to share it. Applies to all sensors mapped in this setup.",
+        "description": "Optional details MiTY uses to tell similar sensors apart for research purposes -- entirely free text, leave anything blank you don't know or don't want to share. Applies to every sensor you mapped in the previous step.",
         "data": {
+          "zone": "Which room/area is this device in?",
           "device_manufacturer": "Manufacturer",
           "device_model": "Model",
-          "device_firmware_version": "Firmware version",
-          "device_calibration_date": "Last calibration date",
-          "device_measurement_uncertainty": "Measurement uncertainty (±, same units as the sensor)",
-          "device_comm_protocol": "How this sensor connects"
+          "device_comm_protocol": "How this device connects"
         }
       },
       "frequency": {
@@ -87,26 +75,14 @@
           "study_nickname": "Name for this study"
         }
       },
-      "zones": {
-        "title": "Where are these sensors?",
-        "description": "MiTY's HERD-IoT data format requires a room/zone for every observation. Choose the zone for each sensor you mapped in the previous step.",
-        "data": {
-          "zone_entity_temperature": "Zone for the temperature sensor",
-          "zone_entity_humidity": "Zone for the humidity sensor",
-          "zone_entity_motion": "Zone for the motion sensor",
-          "zone_entity_energy_usage": "Zone for the energy usage sensor"
-        }
-      },
-      "device_provenance": {
+      "device_details": {
         "title": "Sensor details (optional)",
-        "description": "Optional details about your sensor hardware. MiTY uses this to document measurement provenance for research purposes -- leave blank if you don't know or don't want to share it. Applies to all sensors mapped in this setup.",
+        "description": "Optional details MiTY uses to tell similar sensors apart for research purposes -- entirely free text, leave anything blank you don't know or don't want to share. Applies to every sensor mapped in the previous step.",
         "data": {
+          "zone": "Which room/area is this device in?",
           "device_manufacturer": "Manufacturer",
           "device_model": "Model",
-          "device_firmware_version": "Firmware version",
-          "device_calibration_date": "Last calibration date",
-          "device_measurement_uncertainty": "Measurement uncertainty (±, same units as the sensor)",
-          "device_comm_protocol": "How this sensor connects"
+          "device_comm_protocol": "How this device connects"
         }
       },
       "frequency": {

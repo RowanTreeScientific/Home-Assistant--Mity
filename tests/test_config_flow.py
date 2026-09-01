@@ -34,17 +34,15 @@ VALID_ENROLL_INPUT = {
 }
 
 
-async def _skip_zones_and_provenance(hass: HomeAssistant, flow_id: str):
-    """Submit the still-open parameters form with nothing mapped, then
-    walk through the zones and device_provenance steps that follow with
-    nothing filled in either -- valid when no channels were mapped, since
-    zones then has nothing to ask for and device_provenance is all-optional
-    regardless. Returns the result of reaching the frequency step.
+async def _skip_device_details(hass: HomeAssistant, flow_id: str):
+    """Submit the still-open parameters form with nothing mapped, then the
+    device_details step that follows with nothing filled in either --
+    both are valid empty submissions (parameters: no channels required;
+    device_details: everything in it is optional). Returns the result of
+    reaching the frequency step.
     """
     result = await hass.config_entries.flow.async_configure(flow_id, {})
-    assert result["step_id"] == "zones"
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-    assert result["step_id"] == "device_provenance"
+    assert result["step_id"] == "device_details"
     return await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
 
@@ -73,7 +71,7 @@ async def test_full_flow_creates_entry(hass: HomeAssistant, mock_enroll) -> None
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "parameters"
 
-    result = await _skip_zones_and_provenance(hass, result["flow_id"])
+    result = await _skip_device_details(hass, result["flow_id"])
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "frequency"
 
@@ -99,7 +97,7 @@ async def test_study_nickname_used_as_title(
         result["flow_id"],
         {**VALID_ENROLL_INPUT, "study_nickname": "Indoor Air Study"},
     )
-    result = await _skip_zones_and_provenance(hass, result["flow_id"])
+    result = await _skip_device_details(hass, result["flow_id"])
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"scan_interval_minutes": 240}
     )
@@ -108,12 +106,12 @@ async def test_study_nickname_used_as_title(
     assert result["data"]["study_nickname"] == "Indoor Air Study"
 
 
-async def test_zone_and_provenance_flow_through_to_options(
+async def test_device_details_flow_through_to_options(
     hass: HomeAssistant, mock_enroll
 ) -> None:
-    """Mapping a real channel makes the zones step ask for exactly that
-    channel's zone, and both zone and device-provenance answers end up
-    in the created entry's options."""
+    """Zone and device-provenance answers end up in the created entry's
+    options, and blank fields are genuinely absent rather than present-
+    and-empty (see config_flow.py's _optional_text_field)."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
@@ -123,19 +121,14 @@ async def test_zone_and_provenance_flow_through_to_options(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"entity_temperature": "sensor.living_room_temperature"}
     )
-    assert result["step_id"] == "zones"
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"zone_entity_temperature": "living-room"}
-    )
-    assert result["step_id"] == "device_provenance"
+    assert result["step_id"] == "device_details"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            "device_manufacturer": "Aico",
-            "device_model": "Environmental Sensor Gen 3",
-            "device_comm_protocol": "zigbee",
+            "zone": "living-room",
+            "device_manufacturer": "Ecowitt",
+            "device_comm_protocol": "wifi",
         },
     )
     assert result["step_id"] == "frequency"
@@ -145,13 +138,10 @@ async def test_zone_and_provenance_flow_through_to_options(
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["options"]["entity_temperature"] == "sensor.living_room_temperature"
-    assert result["options"]["zone_entity_temperature"] == "living-room"
-    assert result["options"]["device_manufacturer"] == "Aico"
-    assert result["options"]["device_comm_protocol"] == "zigbee"
-    # Optional fields left blank must not appear at all (see
-    # config_flow.py's _optional_field -- a forced None default breaks
-    # selector validation the same way it did for entity mapping).
-    assert "device_firmware_version" not in result["options"]
+    assert result["options"]["zone"] == "living-room"
+    assert result["options"]["device_manufacturer"] == "Ecowitt"
+    assert result["options"]["device_comm_protocol"] == "wifi"
+    assert "device_model" not in result["options"]
 
 
 async def test_second_study_creates_separate_entry(
@@ -167,7 +157,7 @@ async def test_second_study_creates_separate_entry(
         result["flow_id"],
         {**VALID_ENROLL_INPUT, "study_nickname": "Study One"},
     )
-    result = await _skip_zones_and_provenance(hass, result["flow_id"])
+    result = await _skip_device_details(hass, result["flow_id"])
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"scan_interval_minutes": 240}
     )
@@ -183,7 +173,7 @@ async def test_second_study_creates_separate_entry(
         result2["flow_id"],
         {**VALID_ENROLL_INPUT, "study_nickname": "Study Two"},
     )
-    result2 = await _skip_zones_and_provenance(hass, result2["flow_id"])
+    result2 = await _skip_device_details(hass, result2["flow_id"])
     result2 = await hass.config_entries.flow.async_configure(
         result2["flow_id"], {"scan_interval_minutes": 240}
     )
@@ -316,7 +306,7 @@ async def test_duplicate_instance_aborts(hass: HomeAssistant, mock_enroll) -> No
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], VALID_ENROLL_INPUT
     )
-    result = await _skip_zones_and_provenance(hass, result["flow_id"])
+    result = await _skip_device_details(hass, result["flow_id"])
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"scan_interval_minutes": 240}
     )

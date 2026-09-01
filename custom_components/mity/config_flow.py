@@ -37,15 +37,10 @@ from .const import (
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_STUDY_NICKNAME,
     DOMAIN,
-    HERD_COMM_PROTOCOLS,
-    HERD_ZONES,
     MAX_SCAN_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
-    OPT_DEVICE_CALIBRATION_DATE,
     OPT_DEVICE_COMM_PROTOCOL,
-    OPT_DEVICE_FIRMWARE_VERSION,
     OPT_DEVICE_MANUFACTURER,
-    OPT_DEVICE_MEASUREMENT_UNCERTAINTY,
     OPT_DEVICE_MODEL,
     OPT_ENTITY_ENERGY_USAGE,
     OPT_ENTITY_HUMIDITY,
@@ -53,7 +48,9 @@ from .const import (
     OPT_ENTITY_TEMPERATURE,
     OPT_PAUSED,
     OPT_SCAN_INTERVAL_MINUTES,
-    OPT_ZONE_PREFIX,
+    OPT_ZONE,
+    SUGGESTED_COMM_PROTOCOLS,
+    SUGGESTED_ZONES,
     TERMS_URL,
 )
 
@@ -100,107 +97,50 @@ def _parameters_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
     return vol.Schema(fields)
 
 
-def _zone_select() -> selector.SelectSelector:
-    return selector.SelectSelector(
-        selector.SelectSelectorConfig(
-            options=[
-                selector.SelectOptionDict(value=code, label=label)
-                for code, label in HERD_ZONES
-            ],
-            mode=selector.SelectSelectorMode.DROPDOWN,
-        )
-    )
-
-
-def _zones_schema(
-    mapped_channels: list[str], defaults: dict[str, Any] | None = None
-) -> vol.Schema:
-    """One zone selector per channel that actually has an entity mapped.
-
-    Zone (Zone Classification vocabulary, Implementation Guide 3.2.3) is
-    part of every HERD-IoT observation's identifier -- required, not
-    optional -- so unlike the device-provenance fields below, this isn't
-    skippable. Only shown for channels with a real entity mapped in the
-    previous step; an unmapped channel has nothing to attach a zone to.
+def _optional_text_field(
+    key_name: str, current: Any, suggestions: tuple[str, ...] | None = None
+):
+    """A `vol.Optional` field that's genuinely absent (not present-and-
+    None) when left blank -- see _parameters_schema's docstring above for
+    why a forced `default=None` breaks selector validation. `suggestions`
+    renders as a dropdown-with-custom-entry, matching the backend's own
+    "free text, no fixed vocabulary" contract (API spec section 4):
+    convenient common answers, never enforced.
     """
-    defaults = defaults or {}
-    fields: dict[Any, Any] = {}
-    for channel in mapped_channels:
-        key_name = f"{OPT_ZONE_PREFIX}{channel}"
-        current = defaults.get(key_name)
-        key = (
-            vol.Required(key_name, default=current)
-            if current
-            else vol.Required(key_name)
+    key = vol.Optional(key_name, default=current) if current else vol.Optional(key_name)
+    if suggestions:
+        validator = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=list(suggestions),
+                mode=selector.SelectSelectorMode.DROPDOWN,
+                custom_value=True,
+            )
         )
-        fields[key] = _zone_select()
-    return vol.Schema(fields)
-
-
-def _optional_field(key_name: str, current: Any, validator: Any) -> tuple[Any, Any]:
-    """`vol.Optional(key, default=current)` only when `current` is real.
-
-    A forced `default=None` makes the field present-and-None in the
-    validated output, which most selectors (confirmed for EntitySelector;
-    not re-verified per-type here, so treated as a blanket risk) reject
-    outright since None isn't a valid value of any of their types. Leaving
-    the key genuinely absent when there's nothing to prefill sidesteps
-    that entirely -- see _parameters_schema's docstring for the original
-    version of this bug.
-    """
-    if current not in (None, ""):
-        key = vol.Optional(key_name, default=current)
     else:
-        key = vol.Optional(key_name)
+        validator = str
     return key, validator
 
 
-def _device_provenance_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
-    """Layer 2 (Device Provenance) fields, shared across all mapped channels.
-
-    All optional -- Bronze-tier HERD-IoT compliance doesn't require this
-    layer at all, and Silver/Gold's requirement of it is something the
-    participant may not be able to fill in accurately for a consumer
-    sensor anyway (see coordinator.py's _device_provenance() for how a
-    partially-filled block is handled).
+def _device_details_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+    """Optional zone + device-provenance fields, shared across every
+    mapped channel -- a single MiTY ingest call already bundles every
+    mapped channel's reading under one `_meta`, so "which room" and
+    "which device" apply once per submission, not per channel.
     """
     defaults = defaults or {}
     fields = dict(
         [
-            _optional_field(
-                OPT_DEVICE_MANUFACTURER, defaults.get(OPT_DEVICE_MANUFACTURER), str
+            _optional_text_field(OPT_ZONE, defaults.get(OPT_ZONE), SUGGESTED_ZONES),
+            _optional_text_field(
+                OPT_DEVICE_MANUFACTURER, defaults.get(OPT_DEVICE_MANUFACTURER)
             ),
-            _optional_field(
-                OPT_DEVICE_MODEL, defaults.get(OPT_DEVICE_MODEL), str
+            _optional_text_field(
+                OPT_DEVICE_MODEL, defaults.get(OPT_DEVICE_MODEL)
             ),
-            _optional_field(
-                OPT_DEVICE_FIRMWARE_VERSION,
-                defaults.get(OPT_DEVICE_FIRMWARE_VERSION),
-                str,
-            ),
-            _optional_field(
-                OPT_DEVICE_CALIBRATION_DATE,
-                defaults.get(OPT_DEVICE_CALIBRATION_DATE),
-                selector.DateSelector(),
-            ),
-            _optional_field(
-                OPT_DEVICE_MEASUREMENT_UNCERTAINTY,
-                defaults.get(OPT_DEVICE_MEASUREMENT_UNCERTAINTY),
-                selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        mode=selector.NumberSelectorMode.BOX
-                    )
-                ),
-            ),
-            _optional_field(
+            _optional_text_field(
                 OPT_DEVICE_COMM_PROTOCOL,
-                defaults.get(OPT_DEVICE_COMM_PROTOCOL, "wifi"),
-                selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=list(HERD_COMM_PROTOCOLS),
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
+                defaults.get(OPT_DEVICE_COMM_PROTOCOL),
+                SUGGESTED_COMM_PROTOCOLS,
             ),
         ]
     )
@@ -235,8 +175,7 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
         self._nickname: str = DEFAULT_STUDY_NICKNAME
         self._enrollment: dict[str, Any] = {}
         self._parameters: dict[str, Any] = {}
-        self._zones: dict[str, Any] = {}
-        self._device_provenance: dict[str, Any] = {}
+        self._device_details: dict[str, Any] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -306,7 +245,7 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
             self._parameters = {
                 k: v for k, v in user_input.items() if v is not None
             }
-            return await self.async_step_zones()
+            return await self.async_step_device_details()
 
         return self.async_show_form(
             step_id="parameters",
@@ -316,45 +255,26 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_zones(self, user_input: dict[str, Any] | None = None) -> Any:
-        """Step 3: pick a HERD-IoT zone for each mapped channel.
-
-        Required, not optional -- the HERD-IoT observation identifier
-        (Implementation Guide 3.1.1) includes zone as a component, so a
-        channel without one can't be submitted at all.
-        """
-        if user_input is not None:
-            self._zones = dict(user_input)
-            return await self.async_step_device_provenance()
-
-        return self.async_show_form(
-            step_id="zones",
-            data_schema=_zones_schema(list(self._parameters.keys())),
-        )
-
-    async def async_step_device_provenance(
+    async def async_step_device_details(
         self, user_input: dict[str, Any] | None = None
     ) -> Any:
-        """Step 4: optional Layer 2 (Device Provenance) details.
-
-        Shared across every mapped channel in this first pass -- see
-        coordinator.py's _device_provenance() docstring for why.
-        """
+        """Step 3: optional zone + device provenance, sent as `_meta` on
+        every submission (see coordinator.py's _meta())."""
         if user_input is not None:
-            self._device_provenance = {
+            self._device_details = {
                 k: v for k, v in user_input.items() if v not in (None, "")
             }
             return await self.async_step_frequency()
 
         return self.async_show_form(
-            step_id="device_provenance",
-            data_schema=_device_provenance_schema(),
+            step_id="device_details",
+            data_schema=_device_details_schema(),
         )
 
     async def async_step_frequency(
         self, user_input: dict[str, Any] | None = None
     ) -> Any:
-        """Step 5: submission frequency, then create the entry."""
+        """Step 4: submission frequency, then create the entry."""
         if user_input is not None:
             data = {
                 CONF_BASE_URL: self._base_url,
@@ -363,8 +283,7 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
             }
             options = {
                 **self._parameters,
-                **self._zones,
-                **self._device_provenance,
+                **self._device_details,
                 OPT_SCAN_INTERVAL_MINUTES: int(
                     user_input[OPT_SCAN_INTERVAL_MINUTES]
                 ),
@@ -468,13 +387,12 @@ class MityConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class MityOptionsFlow(OptionsFlow):
-    """Edit parameter mapping, zones, device provenance and frequency."""
+    """Edit parameter mapping, device details and submission frequency."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         self._entry = config_entry
         self._pending: dict[str, Any] = {}
-        self._zones: dict[str, Any] = {}
-        self._device_provenance: dict[str, Any] = {}
+        self._device_details: dict[str, Any] = {}
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -490,7 +408,7 @@ class MityOptionsFlow(OptionsFlow):
             self._pending = {
                 k: v for k, v in user_input.items() if v is not None
             }
-            return await self.async_step_zones()
+            return await self.async_step_device_details()
 
         schema_dict = dict(_parameters_schema(dict(self._entry.options)).schema)
         schema_dict[
@@ -506,36 +424,18 @@ class MityOptionsFlow(OptionsFlow):
             data_schema=vol.Schema(schema_dict),
         )
 
-    async def async_step_zones(self, user_input: dict[str, Any] | None = None) -> Any:
-        """Zone for each channel still mapped after the init step.
-
-        A channel unmapped in this pass simply won't appear here -- and
-        since the final options dict is rebuilt from scratch rather than
-        patched, its old zone value (if any) is dropped along with it.
-        """
-        if user_input is not None:
-            self._zones = dict(user_input)
-            return await self.async_step_device_provenance()
-
-        return self.async_show_form(
-            step_id="zones",
-            data_schema=_zones_schema(
-                list(self._pending.keys()), dict(self._entry.options)
-            ),
-        )
-
-    async def async_step_device_provenance(
+    async def async_step_device_details(
         self, user_input: dict[str, Any] | None = None
     ) -> Any:
         if user_input is not None:
-            self._device_provenance = {
+            self._device_details = {
                 k: v for k, v in user_input.items() if v not in (None, "")
             }
             return await self.async_step_frequency()
 
         return self.async_show_form(
-            step_id="device_provenance",
-            data_schema=_device_provenance_schema(dict(self._entry.options)),
+            step_id="device_details",
+            data_schema=_device_details_schema(dict(self._entry.options)),
         )
 
     async def async_step_frequency(
@@ -544,8 +444,7 @@ class MityOptionsFlow(OptionsFlow):
         if user_input is not None:
             options = {
                 **self._pending,
-                **self._zones,
-                **self._device_provenance,
+                **self._device_details,
                 OPT_SCAN_INTERVAL_MINUTES: int(
                     user_input[OPT_SCAN_INTERVAL_MINUTES]
                 ),
