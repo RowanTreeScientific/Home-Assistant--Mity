@@ -42,8 +42,9 @@ async def test_removing_entry_best_effort_leaves_study(hass: HomeAssistant) -> N
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.mity.api.MityApiClient.submit_herd_entities",
+        "custom_components.mity.api.MityApiClient.submit",
         new_callable=AsyncMock,
+        return_value=type("R", (), {"success": True, "submission_id": 1})(),
     ), patch(
         "custom_components.mity.api.MityApiClient.remove", new_callable=AsyncMock
     ) as mock_remove:
@@ -64,8 +65,9 @@ async def test_removal_failure_does_not_raise(hass: HomeAssistant) -> None:
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.mity.api.MityApiClient.submit_herd_entities",
+        "custom_components.mity.api.MityApiClient.submit",
         new_callable=AsyncMock,
+        return_value=type("R", (), {"success": True, "submission_id": 1})(),
     ), patch(
         "custom_components.mity.api.MityApiClient.remove",
         new_callable=AsyncMock,
