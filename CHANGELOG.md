@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2 — Fix: "Send Data Now" not updating entities
+
+Found via live testing against a real Home Assistant instance and the production MiTY backend: pressing `button.mity_send_data_now` submitted successfully (confirmed accepted server-side), but `sensor.mity_status`, `binary_sensor.mity_connected` and the rest kept showing stale values indefinitely instead of updating immediately.
+
+- Root cause: `coordinator.py::submit_now()` mutates `self.data` directly but never called `self.async_update_listeners()`. The periodic scheduled path works because `DataUpdateCoordinator`'s own refresh cycle calls that automatically after `_async_update_data()` returns, but a direct button press bypasses that — so the change was invisible until the next scheduled poll (up to 7 days away at the maximum configured interval).
+- Added `self.async_update_listeners()` at every point `submit_now()` mutates `self.data` (each error branch, plus the success/rejected branch).
+- Verified live: enrolled a real device against the production MiTY backend, pressed "Send Data Now", and confirmed the entities updated immediately, both before this fix (stale) and after (correct).
+
 ## 0.4.1 — Correction: revert the wrong HERD-IoT migration, add the real `_meta`
 
 **0.4.0's premise was wrong.** "The MiTY backend is being rebuilt against the HERD-IoT Implementation Guide v1.0" was not correct — that guide is the *formal*, aspirational HERD-IoT specification from the PhD portfolio, not the live backend's actual contract, which never changed: a flat JSON body over `POST /v1/ingest`, exactly as built in Milestones 1–4. Confirmed directly via the platform team's own API specification document.
