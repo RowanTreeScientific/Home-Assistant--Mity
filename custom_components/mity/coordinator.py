@@ -193,6 +193,7 @@ class MityCoordinator(DataUpdateCoordinator[MityData]):
             self.hass.bus.async_fire(
                 EVENT_DATA_ERROR, {"reason": "auth", "error": str(err)}
             )
+            self.async_update_listeners()
             # The device's own key was rejected -- likely revoked on the
             # MiTY side outside this integration's knowledge. Prompt the
             # user to reauthenticate rather than just failing silently
@@ -205,12 +206,14 @@ class MityCoordinator(DataUpdateCoordinator[MityData]):
             self.hass.bus.async_fire(
                 EVENT_DATA_ERROR, {"reason": "connection", "error": str(err)}
             )
+            self.async_update_listeners()
             return None
         except MityApiError as err:
             self._record_error(str(err))
             self.hass.bus.async_fire(
                 EVENT_DATA_ERROR, {"reason": "api", "error": str(err)}
             )
+            self.async_update_listeners()
             return None
 
         self.data.last_payload = payload
@@ -236,6 +239,7 @@ class MityCoordinator(DataUpdateCoordinator[MityData]):
                 EVENT_DATA_REJECTED, {"submission_id": result.submission_id}
             )
 
+        self.async_update_listeners()
         return result
 
     def _record_error(self, message: str) -> None:
