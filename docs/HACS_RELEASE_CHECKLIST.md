@@ -44,13 +44,15 @@ git push origin vX.Y.Z
 
 ## 4. Brand assets
 
-HACS and Home Assistant's frontend pull integration icons/logos from the separate [`home-assistant/brands`](https://github.com/home-assistant/brands) repository, not from anything in this repo. Until a submission is made there, this integration shows Home Assistant's generic puzzle-piece icon — functionally fine, just not distinctive.
+Home Assistant's frontend pulls integration icons/logos from the separate [`home-assistant/brands`](https://github.com/home-assistant/brands) repository. **HACS's own validation, however, accepts a local fallback**: a `custom_components/<domain>/brand/` directory containing at least `icon.png` satisfies its `check-brands` step without needing anything merged upstream (confirmed via [hacs.xyz's own publish docs](https://hacs.xyz/docs/publish/include) and the exact path named in the `hacs/action` failure annotation).
 
-- [x] A MiTY logo now exists in the project (`docs/Mity logo.png`, `docs/Mity logo with text.png`) — added 2026-09-01.
-- [x] Placeholder `icon.png`/`icon@2x.png`/`logo.png`/`logo@2x.png` generated at [assets/brand/](../assets/brand/) at the sizes `home-assistant/brands` requires, from those sources. **These are upscaled from a 79×71px original and are soft, not submission-quality** — see [assets/brand/README.md](../assets/brand/README.md) for exactly what needs replacing before a real submission.
-- [ ] Replace the placeholders with exports from a real high-resolution (ideally vector) source before actually submitting.
+- [x] A MiTY logo now exists in the project (originally `docs/Mity logo.png`/`Mity logo with text.png`, since superseded).
+- [x] Placeholder `icon.png`/`icon@2x.png`/`logo.png`/`logo@2x.png` generated at [assets/brand/](../assets/brand/) at the sizes `home-assistant/brands` requires. **Still upscaled from a low-resolution original and soft, not submission-quality** — see [assets/brand/README.md](../assets/brand/README.md).
+- [x] **Copied into `custom_components/mity/brand/`** (2026-09-01) — this is what actually clears the `hacs` job's brand-assets check in CI, since HACS checks this local path before falling back to the external repo. Confirmed via the `hacs/action` annotation naming exactly this path (`custom_components/mity/brand/icon.png`) as what it looks for.
+- [ ] Not yet re-confirmed green — check the **Actions** tab after this push lands.
+- [ ] Replace the placeholders (in both `assets/brand/` and `custom_components/mity/brand/`) with exports from a real high-resolution (ideally vector) source when available.
 - [ ] Optional `dark_icon.png`/`dark_logo.png` variants for dark theme — not attempted yet.
-- [ ] A PR to `home-assistant/brands` adding the final assets under `custom_integrations/mity/`, following their [contribution guide](https://github.com/home-assistant/brands#contributing). No code change needed here first — `manifest.json`'s `domain` (`mity`) is already what brands looks up by.
+- [ ] A PR to `home-assistant/brands` itself (adding assets under `custom_integrations/mity/`, per their [contribution guide](https://github.com/home-assistant/brands#contributing)) is still worth doing eventually for Home Assistant Core's own frontend to show the icon — the local `custom_components/mity/brand/` copy only satisfies HACS's *validation*, not Home Assistant's actual UI rendering, which still reads from the external repo. Not blocking anything right now.
 
 ## 5. Submit to `hacs/default`
 

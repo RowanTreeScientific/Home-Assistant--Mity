@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.14 — Clear the hacs brand-assets CI check locally
+
+The `hacs` job's brand-assets failure annotation named an exact local path it checks first: `custom_components/mity/brand/icon.png`. Confirmed via [hacs.xyz's publish docs](https://hacs.xyz/docs/publish/include) that a local `custom_components/<domain>/brand/` directory is a fully valid alternative to a `home-assistant/brands` submission for HACS's own validation — copied the existing (still placeholder-quality) `assets/brand/*.png` files there. Note this only satisfies HACS's CI check; Home Assistant's actual running frontend still reads icons from the external `home-assistant/brands` repo/CDN, so that submission is still worth doing eventually, just not blocking anything now.
+
 ## 0.3.13 — Consistent icon set, still placeholder-quality
 
 `icon@2x.png` was swapped for a full "MiTY TRE" text-lockup design (by choice, not the original icon-only mark). Regenerated `icon.png` from the same source scaled down, so the 1x/2x icon pair shows the same design consistently rather than two different logos at two different sizes. Still soft/low-resolution throughout — see `assets/brand/README.md`.
