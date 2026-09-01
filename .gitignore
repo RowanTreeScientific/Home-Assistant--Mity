@@ -12,3 +12,8 @@ venv/
 htmlcov/
 config/
 *.log
+
+# MiTY website marketing collateral, not this integration's brand assets --
+# see assets/brand/ for the actual HA brand icon/logo placeholders.
+docs/Landing Page - Hero Image 1.png
+docs/Pricing hero banner.png

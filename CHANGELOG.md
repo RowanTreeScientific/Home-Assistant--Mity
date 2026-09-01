@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.12 — Placeholder brand assets
+
+A real MiTY logo (`docs/Mity logo.png`, `docs/Mity logo with text.png`) was added to the project. Generated placeholder `icon.png`/`icon@2x.png`/`logo.png`/`logo@2x.png` at [assets/brand/](assets/brand/), at the exact sizes `home-assistant/brands` requires — upscaled from the low-resolution sources (79×71px original), so soft rather than crisp; explicitly documented as not submission-quality in `assets/brand/README.md`, not silently presented as finished. Excluded two unrelated MiTY-website marketing images (hero banners, ~4MB combined) that landed in the same `docs/` drop from version control via `.gitignore` — they aren't this integration's brand assets.
+
 ## 0.3.11 — CI fully green; bump actions off deprecated Node 20
 
 **CI confirmed fully green end-to-end** for the first time: `hassfest` and both `pytest (3.12)`/`pytest (3.13)` all pass (`Tests` workflow conclusion: success). `Validate`'s `hacs` job remains red only on the known, tracked brand-assets gap.

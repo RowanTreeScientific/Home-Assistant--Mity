@@ -46,13 +46,11 @@ git push origin vX.Y.Z
 
 HACS and Home Assistant's frontend pull integration icons/logos from the separate [`home-assistant/brands`](https://github.com/home-assistant/brands) repository, not from anything in this repo. Until a submission is made there, this integration shows Home Assistant's generic puzzle-piece icon — functionally fine, just not distinctive.
 
-**This needs a design decision before it can be built**: MiTY doesn't currently have a logo/icon asset anywhere in this project's source material (checked — none exists). Submitting requires:
-- `icon.png` (256×256) and `icon@2x.png` (512×512) — required.
-- `logo.png` and `logo@2x.png` — optional but recommended (wider aspect ratio, used in more UI contexts).
-- Optional `dark_icon.png`/`dark_logo.png` variants for dark theme.
-- A PR to `home-assistant/brands` adding these under `custom_integrations/mity/`, following their [contribution guide](https://github.com/home-assistant/brands#contributing).
-
-Once a logo exists (from the MiTY brand/marketing side) and the `home-assistant/brands` PR is merged, no code change is needed here — `manifest.json`'s `domain` (`mity`) is already what brands looks up by.
+- [x] A MiTY logo now exists in the project (`docs/Mity logo.png`, `docs/Mity logo with text.png`) — added 2026-09-01.
+- [x] Placeholder `icon.png`/`icon@2x.png`/`logo.png`/`logo@2x.png` generated at [assets/brand/](../assets/brand/) at the sizes `home-assistant/brands` requires, from those sources. **These are upscaled from a 79×71px original and are soft, not submission-quality** — see [assets/brand/README.md](../assets/brand/README.md) for exactly what needs replacing before a real submission.
+- [ ] Replace the placeholders with exports from a real high-resolution (ideally vector) source before actually submitting.
+- [ ] Optional `dark_icon.png`/`dark_logo.png` variants for dark theme — not attempted yet.
+- [ ] A PR to `home-assistant/brands` adding the final assets under `custom_integrations/mity/`, following their [contribution guide](https://github.com/home-assistant/brands#contributing). No code change needed here first — `manifest.json`'s `domain` (`mity`) is already what brands looks up by.
 
 ## 5. Submit to `hacs/default`
 
