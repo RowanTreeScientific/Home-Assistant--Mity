@@ -35,10 +35,15 @@ VALID_ENROLL_INPUT = {
 
 
 async def _skip_zones_and_provenance(hass: HomeAssistant, flow_id: str):
-    """Walk through the zones and device_provenance steps with nothing
-    filled in -- valid when the previous parameters step mapped no
-    channels, since both steps are then empty/all-optional."""
+    """Submit the still-open parameters form with nothing mapped, then
+    walk through the zones and device_provenance steps that follow with
+    nothing filled in either -- valid when no channels were mapped, since
+    zones then has nothing to ask for and device_provenance is all-optional
+    regardless. Returns the result of reaching the frequency step.
+    """
     result = await hass.config_entries.flow.async_configure(flow_id, {})
+    assert result["step_id"] == "zones"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["step_id"] == "device_provenance"
     return await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
