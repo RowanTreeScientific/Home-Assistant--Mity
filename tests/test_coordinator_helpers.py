@@ -16,7 +16,7 @@ separately under pytest-homeassistant-custom-component.
 from __future__ import annotations
 
 try:
-    from custom_components.mity.coordinator import _coerce_value
+    from custom_components.mity.coordinator import _coerce_value, _sanitize_device_id
 
     _SKIP = False
 except ModuleNotFoundError:
@@ -24,14 +24,23 @@ except ModuleNotFoundError:
 
 if not _SKIP:
 
-    def test_coerce_motion_on() -> None:
-        assert _coerce_value("motion", "on") is True
+    def test_coerce_occupancy_on() -> None:
+        assert _coerce_value("occupancy", "on") is True
 
-    def test_coerce_motion_off() -> None:
-        assert _coerce_value("motion", "off") is False
+    def test_coerce_occupancy_off() -> None:
+        assert _coerce_value("occupancy", "off") is False
 
     def test_coerce_numeric() -> None:
         assert _coerce_value("temperature", "21.4") == 21.4
 
     def test_coerce_non_numeric_passthrough() -> None:
         assert _coerce_value("temperature", "not-a-number") == "not-a-number"
+
+    def test_sanitize_device_id_dots_and_underscores() -> None:
+        assert (
+            _sanitize_device_id("sensor.living_room_temperature")
+            == "sensor-living-room-temperature"
+        )
+
+    def test_sanitize_device_id_lowercases() -> None:
+        assert _sanitize_device_id("sensor.Kitchen_CO2") == "sensor-kitchen-co2"

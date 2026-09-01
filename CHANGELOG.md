@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — Migrate to HERD-IoT Implementation Guide v1.0
+
+**The MiTY backend is being rebuilt against a new, formal data specification** (the HERD-IoT Implementation Guide v1.0, Rowan Tree Scientific), which supersedes the flat JSON body this integration previously sent to `/v1/ingest`. This release migrates the submission pipeline to match.
+
+- New `POST /api/v1/herd/direct` client method (`api.py::submit_herd_entities`), sending a batch of JSON-LD `HERDObservation` entities per the spec's Pathway 1 (Direct Submission). The old flat `submit()`/`/v1/ingest` method is kept, clearly marked superseded, but no longer called.
+- `coordinator.py` now constructs one full HERD-IoT entity per mapped channel — identifier URI (`urn:herd-iot:{programme}:{provider}:{propertyToken}:{zone}:{domain}:{measure}:{device-id}:{observation-id}`), Layer 1 (Observation Core, always) and Layer 2 (Device Provenance, when configured).
+- New `uuid7.py` — a minimal RFC 9562 UUID v7 generator, since the identifier scheme requires one and Python's stdlib only gained `uuid.uuid7()` in 3.14, newer than HA's minimum supported version.
+- Config flow gained two new steps: **zones** (required — the identifier needs one per mapped sensor) and **device provenance** (optional — manufacturer/model/firmware/calibration date/measurement uncertainty/communication protocol, shared across all mapped sensors in this first pass).
+- Fixed domain/measure/unitCode mapping per channel, drawn from the spec's controlled vocabularies (`const.py::HERD_CHANNEL_ENVELOPE`).
+
+**Several fields are confirmed best-guess placeholders, not settled** — most importantly the pseudonymous property token, which this integration currently derives locally rather than receiving from the Glass Door Vault (a real token can only come from the vault by design, so this is a known, flagged gap, not an oversight). See [docs/HERD_IOT_MIGRATION.md](docs/HERD_IOT_MIGRATION.md) for the complete list of what's confirmed vs. placeholder and the open questions for whoever owns the rebuilt backend. Expect `sensor.mity_status` to show `rejected` until those converge.
+
 ## 0.3.14 — Clear the hacs brand-assets CI check locally
 
 The `hacs` job's brand-assets failure annotation named an exact local path it checks first: `custom_components/mity/brand/icon.png`. Confirmed via [hacs.xyz's publish docs](https://hacs.xyz/docs/publish/include) that a local `custom_components/<domain>/brand/` directory is a fully valid alternative to a `home-assistant/brands` submission for HACS's own validation — copied the existing (still placeholder-quality) `assets/brand/*.png` files there. Note this only satisfies HACS's CI check; Home Assistant's actual running frontend still reads icons from the external `home-assistant/brands` repo/CDN, so that submission is still worth doing eventually, just not blocking anything now.
