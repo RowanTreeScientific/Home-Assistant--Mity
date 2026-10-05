@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — Contribute any sensor, each one described (HERD-IoT 2.0)
+
+Implements the Home Assistant side of the HERD-IoT 2.0 profile (Specification 2.0 §14; GDV build item D3). The four fixed channels stay exactly as they were, so nothing changes for existing participants.
+
+- **Any further sensors:** an optional multi-select, "Other sensors to contribute", lets the participant add up to 20 `sensor` or `binary_sensor` entities. Each is sent as the field `ha:<entity_id>`.
+- **Every field is described:** `_meta.entities` gives each mapped field its domain, device class, state class, unit and last update. These come straight from Home Assistant; nothing is invented, and a missing attribute is simply left out.
+- **Why:** the research side maps these through its published Home Assistant profile and records each sensor as its own datastream. Researchers then know exactly what each reading is: an instant temperature, a meter's running total, a motion sensor's sampled state. Unknown, unavailable or unmapped entities are left out, as before.
+- Payload assembly is now in pure helpers (`assemble_fields`, `entity_description`) with tests.
+- MiTY's local route keeps the new fields as unrecognised terms (it already never drops a field). The GDV route forwards them unchanged.
+
 ## 0.4.2 — Fix: "Send Data Now" not updating entities
 
 Found via live testing against a real Home Assistant instance and the production MiTY backend: pressing `button.mity_send_data_now` submitted successfully (confirmed accepted server-side), but `sensor.mity_status`, `binary_sensor.mity_connected` and the rest kept showing stale values indefinitely instead of updating immediately.

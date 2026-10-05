@@ -18,7 +18,8 @@
           "entity_temperature": "Indoor temperature sensor",
           "entity_humidity": "Indoor humidity sensor",
           "entity_motion": "Motion / occupancy sensor",
-          "entity_energy_usage": "Energy usage sensor"
+          "entity_energy_usage": "Energy usage sensor",
+          "extra_entities": "Other sensors to contribute (optional)"
         }
       },
       "device_details": {
@@ -72,7 +73,8 @@
           "entity_humidity": "Indoor humidity sensor",
           "entity_motion": "Motion / occupancy sensor",
           "entity_energy_usage": "Energy usage sensor",
-          "study_nickname": "Name for this study"
+          "study_nickname": "Name for this study",
+          "extra_entities": "Other sensors to contribute (optional)"
         }
       },
       "device_details": {

@@ -46,6 +46,8 @@ from .const import (
     OPT_ENTITY_HUMIDITY,
     OPT_ENTITY_MOTION,
     OPT_ENTITY_TEMPERATURE,
+    OPT_EXTRA_ENTITIES,
+    EXTRA_ENTITY_DOMAINS,
     OPT_PAUSED,
     OPT_SCAN_INTERVAL_MINUTES,
     OPT_ZONE,
@@ -94,6 +96,17 @@ def _parameters_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
         fields[key] = selector.EntitySelector(
             selector.EntitySelectorConfig(domain=CHANNEL_DOMAIN_FILTER[channel])
         )
+    # HERD-IoT 2.0: any further sensors to contribute (same "no forced None"
+    # rule: only prefill a real, non-empty list)
+    extras = defaults.get(OPT_EXTRA_ENTITIES)
+    extra_key = (
+        vol.Optional(OPT_EXTRA_ENTITIES, default=extras)
+        if extras
+        else vol.Optional(OPT_EXTRA_ENTITIES)
+    )
+    fields[extra_key] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=EXTRA_ENTITY_DOMAINS, multiple=True)
+    )
     return vol.Schema(fields)
 
 

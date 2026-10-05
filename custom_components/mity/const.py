@@ -69,6 +69,16 @@ CHANNEL_DEVICE_CLASS: Final[dict[str, str]] = {
 # per-channel: a single ingest call already bundles every mapped
 # channel's reading, so "which room is this device in" and "who made
 # this device" apply to the submission as a whole.
+# HERD-IoT 2.0 (Spec 2.0 §14, the Home Assistant profile): any further sensor the
+# participant chooses is sent as `ha:<entity_id>`, and every mapped field is
+# described in `_meta.entities` (domain, device class, state class, unit, last
+# update) so the research side can tell what kind of reading it is instead of
+# relying on four fixed channels. Up to MAX_EXTRA_ENTITIES extra entities.
+OPT_EXTRA_ENTITIES: Final = "extra_entities"
+EXTRA_ENTITY_DOMAINS: Final[list[str]] = ["sensor", "binary_sensor"]
+MAX_EXTRA_ENTITIES: Final = 20
+EXTRA_FIELD_PREFIX: Final = "ha:"
+
 OPT_ZONE: Final = "zone"
 OPT_DEVICE_MANUFACTURER: Final = "device_manufacturer"
 OPT_DEVICE_MODEL: Final = "device_model"

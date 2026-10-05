@@ -25,6 +25,9 @@ from .api import (
     MityConnectionError,
 )
 from .const import (
+    EXTRA_FIELD_PREFIX,
+    MAX_EXTRA_ENTITIES,
+    OPT_EXTRA_ENTITIES,
     CHANNEL_FIELD_NAMES,
     CONF_STUDY_NICKNAME,
     DATA_CHANNELS,
@@ -136,20 +139,22 @@ class MityCoordinator(DataUpdateCoordinator[MityData]):
             "deviceId": self._device_id(),
             "timestamp": dt_util.utcnow().isoformat(),
         }
-        count = 0
+        mapped: dict[str, Any] = {}
         for channel in DATA_CHANNELS:
             entity_id = self.entry.options.get(channel)
-            if not entity_id:
-                continue
-            state = self.hass.states.get(entity_id)
-            if state is None or state.state in ("unknown", "unavailable"):
-                continue
-            field_name = CHANNEL_FIELD_NAMES[channel]
-            payload[field_name] = _coerce_value(field_name, state.state)
-            count += 1
-        self.data.parameters_configured = count
+            if entity_id:
+                mapped[CHANNEL_FIELD_NAMES[channel]] = self.hass.states.get(entity_id)
+        for entity_id in list(self.entry.options.get(OPT_EXTRA_ENTITIES) or [])[:MAX_EXTRA_ENTITIES]:
+            mapped[f"{EXTRA_FIELD_PREFIX}{entity_id}"] = self.hass.states.get(entity_id)
 
-        if meta := self._meta():
+        fields, entities = assemble_fields(mapped)
+        payload.update(fields)
+        self.data.parameters_configured = len(fields)
+
+        meta = self._meta() or {}
+        if entities:
+            meta["entities"] = entities
+        if meta:
             payload["_meta"] = meta
 
         return payload
@@ -247,6 +252,46 @@ class MityCoordinator(DataUpdateCoordinator[MityData]):
         self.data.last_status = "error"
         self.data.last_error = message
         _LOGGER.warning("MiTY submission failed: %s", message)
+
+
+def entity_description(state: Any) -> dict[str, Any]:
+    """HERD-IoT 2.0 description of one mapped entity (Spec 2.0 §14).
+
+    Only what Home Assistant itself reports: no defaults are invented. The
+    research side maps device class + state class + unit through its
+    published Home Assistant profile.
+    """
+    attrs = getattr(state, "attributes", {}) or {}
+    entity_id = str(state.entity_id)
+    out: dict[str, Any] = {
+        "entity_id": entity_id,
+        "domain": entity_id.split(".", 1)[0],
+    }
+    for key in ("device_class", "state_class", "unit_of_measurement"):
+        if attrs.get(key) is not None:
+            out[key] = str(attrs[key])
+    last = getattr(state, "last_updated", None)
+    if last is not None:
+        out["last_updated"] = last.isoformat()
+    return out
+
+
+def assemble_fields(
+    mapped: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Field values and their `_meta.entities` descriptions.
+
+    `mapped` is {field name: HA State or None}. An entity that is missing,
+    unknown or unavailable is simply omitted, never sent as null/zero.
+    """
+    fields: dict[str, Any] = {}
+    entities: dict[str, dict[str, Any]] = {}
+    for field_name, state in mapped.items():
+        if state is None or state.state in ("unknown", "unavailable"):
+            continue
+        fields[field_name] = _coerce_value(field_name, state.state)
+        entities[field_name] = entity_description(state)
+    return fields, entities
 
 
 def _coerce_value(field_name: str, raw_state: str) -> Any:
