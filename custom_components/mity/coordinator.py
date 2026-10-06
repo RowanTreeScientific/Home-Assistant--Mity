@@ -25,9 +25,6 @@ from .api import (
     MityConnectionError,
 )
 from .const import (
-    EXTRA_FIELD_PREFIX,
-    MAX_EXTRA_ENTITIES,
-    OPT_EXTRA_ENTITIES,
     CHANNEL_FIELD_NAMES,
     CONF_STUDY_NICKNAME,
     DATA_CHANNELS,
@@ -35,9 +32,12 @@ from .const import (
     EVENT_DATA_ACCEPTED,
     EVENT_DATA_ERROR,
     EVENT_DATA_REJECTED,
+    EXTRA_FIELD_PREFIX,
+    MAX_EXTRA_ENTITIES,
     OPT_DEVICE_COMM_PROTOCOL,
     OPT_DEVICE_MANUFACTURER,
     OPT_DEVICE_MODEL,
+    OPT_EXTRA_ENTITIES,
     OPT_PAUSED,
     OPT_ZONE,
 )
@@ -144,7 +144,8 @@ class MityCoordinator(DataUpdateCoordinator[MityData]):
             entity_id = self.entry.options.get(channel)
             if entity_id:
                 mapped[CHANNEL_FIELD_NAMES[channel]] = self.hass.states.get(entity_id)
-        for entity_id in list(self.entry.options.get(OPT_EXTRA_ENTITIES) or [])[:MAX_EXTRA_ENTITIES]:
+        extras = list(self.entry.options.get(OPT_EXTRA_ENTITIES) or [])
+        for entity_id in extras[:MAX_EXTRA_ENTITIES]:
             mapped[f"{EXTRA_FIELD_PREFIX}{entity_id}"] = self.hass.states.get(entity_id)
 
         fields, entities = assemble_fields(mapped)
