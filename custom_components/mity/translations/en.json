@@ -113,7 +113,8 @@
     },
     "button": {
       "send_data_now": { "name": "Send data now" },
-      "refresh_configuration": { "name": "Refresh configuration" }
+      "refresh_configuration": { "name": "Refresh configuration" },
+      "open_gdv_record": { "name": "Open my GDV record" }
     }
   }
 }

@@ -70,6 +70,7 @@ MityAuthError = _api.MityAuthError
 MityConnectionError = _api.MityConnectionError
 MityInvalidEnrollCodeError = _api.MityInvalidEnrollCodeError
 MityRejoinNotPermittedError = _api.MityRejoinNotPermittedError
+MityRecordNotInGdvError = _api.MityRecordNotInGdvError
 
 BASE_URL = "http://api.mi-ty-tre.co.uk"
 VALID_CODE = "8f2a1c9e4b7d3f0a6c5e2b8d1f4a7c9e"
@@ -253,3 +254,24 @@ async def test_connection_error(client: MityApiClient, session) -> None:
     _mock_exception(session, ClientConnectionError("mock failure"))
     with pytest.raises(MityConnectionError):
         await client.enroll(VALID_CODE)
+
+
+async def test_record_link(client: MityApiClient, session) -> None:
+    _mock_response(
+        session,
+        200,
+        {
+            "link": "https://gdv.example/#link=abc",
+            "expiresAt": "2026-10-08T12:10:00Z",
+            "singleUse": True,
+        },
+    )
+    result = await client.record_link(VALID_KEY)
+    assert result.link == "https://gdv.example/#link=abc"
+    assert result.expires_at == "2026-10-08T12:10:00Z"
+
+
+async def test_record_link_not_in_gdv(client: MityApiClient, session) -> None:
+    _mock_response(session, 404, {"error": "This trial keeps its records in MiTY"})
+    with pytest.raises(MityRecordNotInGdvError):
+        await client.record_link(VALID_KEY)

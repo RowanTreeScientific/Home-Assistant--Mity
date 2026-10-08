@@ -45,6 +45,10 @@ class MityRejoinNotPermittedError(MityApiError):
     """Raised when a trial's rejoin_policy is 'new_identity_required'."""
 
 
+class MityRecordNotInGdvError(MityApiError):
+    """The trial keeps its records in MiTY itself, not in the Glass Door Vault."""
+
+
 class MityRateLimitedError(MityApiError):
     """Raised on 429."""
 
@@ -75,6 +79,14 @@ class RemovalResult:
     data_will_be_deleted: bool
     deleted_immediately: bool
     cooloff_ends_at: str | None
+
+
+@dataclass
+class RecordLink:
+    """A single-use link to the participant's own Glass Door Vault record."""
+
+    link: str | None
+    expires_at: str | None
 
 
 @dataclass
@@ -109,6 +121,8 @@ class MityApiClient:
                     raise MityAuthError(f"{method} {path} -> {resp.status}")
                 if resp.status == 404 and path == "/v1/citizen-science/enroll":
                     raise MityInvalidEnrollCodeError()
+                if resp.status == 404 and path == "/v1/citizen-science/gdv-record-link":
+                    raise MityRecordNotInGdvError()
                 if resp.status == 429:
                     raise MityRateLimitedError(f"{method} {path} rate limited")
                 body: dict[str, Any] = {}
@@ -213,6 +227,21 @@ class MityApiClient:
             deleted_immediately=bool(body.get("deletedImmediately")),
             cooloff_ends_at=body.get("cooloffEndsAt"),
         )
+
+    async def record_link(self, device_api_key: str) -> RecordLink:
+        """Call POST /v1/citizen-science/gdv-record-link (GDV decision D-36).
+
+        For a trial routed through the Glass Door Vault, returns a link that
+        opens the participant's own record in the GDV portal. It works once
+        and expires within minutes, so it is shown, never stored.
+        """
+        body = await self._request(
+            "POST",
+            "/v1/citizen-science/gdv-record-link",
+            headers=self._auth_headers(device_api_key),
+            json={},
+        )
+        return RecordLink(link=body.get("link"), expires_at=body.get("expiresAt"))
 
     async def rejoin(self, rejoin_token: str) -> EnrollmentResult:
         """Call POST /v1/citizen-science/rejoin using the stored rejoin token.
