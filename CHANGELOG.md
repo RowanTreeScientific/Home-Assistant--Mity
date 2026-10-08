@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — Open my GDV record
+
+Lets a participant open their own record in the Glass Door Vault (GDV) straight from Home Assistant (GDV decision D-36, open item O19).
+
+- **New button, "Open my GDV record"** (`button.mity_open_my_gdv_record`). Pressing it asks MiTY for a single-use link to the participant's own GDV record and shows it as a Home Assistant notification. The link opens the GDV portal already signed in.
+- **The link is short-lived and shown, never stored:** it works once and expires within 10 minutes. Each press replaces the previous notification. The notification warns that anyone with access to this Home Assistant can see the link until it expires.
+- **Studies that keep their records in MiTY** (not routed through GDV) get a plain explanation instead of a link.
+- New client call `MityApiClient.record_link()` and error `MityRecordNotInGdvError`, with tests.
+- **Requires** the MiTY API with `POST /v1/citizen-science/gdv-record-link` (RowanTreeScientific/API `b5bb66a`). Nothing else changes for existing participants.
+
 ## 0.5.0 — Contribute any sensor, each one described (HERD-IoT 2.0)
 
 Implements the Home Assistant side of the HERD-IoT 2.0 profile (Specification 2.0 §14; GDV build item D3). The four fixed channels stay exactly as they were, so nothing changes for existing participants.

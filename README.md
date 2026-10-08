@@ -99,6 +99,7 @@ Once enrolled, a device appears (named after the study, per config entry) with:
 | `switch.mity_pause_contribution` | Switch | Pause/resume sending data. **MiTY never enforces pause server-side** — this switch is what actually stops submissions; it also tells MiTY's own dashboards your device is paused (not broken/offline) |
 | `button.mity_send_data_now` | Button | Submit immediately, outside the normal schedule |
 | `button.mity_refresh_configuration` | Button | Force a coordinator refresh |
+| `button.mity_open_my_gdv_record` | Button | Show a single-use link (10 minutes) to your own record in the Glass Door Vault, for studies routed through GDV |
 
 ## Events
 
